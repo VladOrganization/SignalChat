@@ -31,8 +31,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: AchieveClub.Server/Dockerfile
+          file: Dockerfile
           push: true
           tags: |
-            ghcr.io/vladorganization/achieve_club_backend:latest
-            ghcr.io/vladorganization/achieve_club_backend:${{ github.run_number }}
+            ghcr.io/vladorganization/signal_chat:latest
+            ghcr.io/vladorganization/signal_chat:${{ github.run_number }}
