@@ -350,6 +350,7 @@
             .catch(function (err) {
                 return console.error(err.toString());
             });
+        message.value = '';
     });
 
     hubConnection.on("Receive", function (message) {
