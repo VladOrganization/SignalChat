@@ -48,6 +48,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+string corsPolicyName = "CorsOptions";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(corsPolicyName,
+        policyBuilder => policyBuilder
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()
+    );
+});
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -62,6 +75,8 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+app.UseCors(corsPolicyName);
+
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
@@ -73,4 +88,6 @@ app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
 
-public partial class Program { }
+public partial class Program
+{
+}
