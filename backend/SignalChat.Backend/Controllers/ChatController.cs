@@ -13,41 +13,49 @@ using SixLabors.ImageSharp.Processing;
 namespace SignalChat.Backend.Controllers;
 
 [ApiController]
-[Authorize]
+
 [Route("api/[controller]")]
 public class ChatController(ISender sender) : ControllerBase
 {
+    [Authorize]
     [HttpGet("messages")]
     public Task<PagedResult<MessageDto>> GetMessages([FromQuery] GetMessagesQuery query, CancellationToken ct)
         => sender.Send(query, ct);
 
     private readonly IWebHostEnvironment _env;
     [HttpPost("send-image")]
-    public async Task<IActionResult> SendInage(IFormFile file)
+   
+    public async Task<ActionResult> UploadAvatar(IFormFile file)
     {
+
+
         if (file.Length == 0)
         {
-            return BadRequest("file is not send");
+            return BadRequest("File is empty");
         }
-        var uploadsFolder = Path.Combine(_env.WebRootPath, "images");
-        Directory.CreateDirectory(uploadsFolder);
-        
-        var fileName = $"{Guid.NewGuid()}.jpg";
-        var filePath = Path.Combine(uploadsFolder, fileName);
-        using (var stream = file.OpenReadStream())
-        using (var image = await Image.LoadAsync(stream))
+
+        var avatarsDir = Path.Combine(_env.WebRootPath, "avatars"); //C:\Users\vladi\RiderProjects\AuthSample\AuthSample.Backend\wwwroot\avatars
+        Directory.CreateDirectory(avatarsDir);
+
+        var fileName = $"{userId}.webp";
+        var filePath = Path.Combine(avatarsDir, fileName);
+
+        using (var image = await Image.LoadAsync(file.OpenReadStream()))
         {
-            if (image.Width > 800)
-            {
-                image.Mutate(x => x.Resize(800, 800));
-            }
+            var size = Math.Min(image.Width, image.Height);
+            image.Mutate(x => x
+                .Crop(new Rectangle((image.Width - size) / 2, (image.Height - size) / 2, size, size))
+                .Resize(500, 500));
 
-            var encoder = new JpegEncoder { Quality = 75 };
-            await image.SaveAsync(filePath, encoder);
+            await image.SaveAsWebpAsync(filePath);
         }
 
-        return Ok(new { path = $"/images/{fileName}" });
+        user.AvatarUrl = $"/avatars/{fileName}";
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new { AvatarUrl = user.AvatarUrl });
     }
+    [Authorize]
     [HttpPost("messages")]
     public Task<MessageDto> SendMessage([FromBody] SendMessageRequest request, CancellationToken ct)
     {
