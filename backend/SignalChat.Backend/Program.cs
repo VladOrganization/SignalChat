@@ -77,6 +77,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(corsPolicyName);
 
+app.UseStaticFiles();
+
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 

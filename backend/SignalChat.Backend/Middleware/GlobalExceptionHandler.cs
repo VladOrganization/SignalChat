@@ -5,8 +5,10 @@ using ValidationException = SignalChat.Backend.Exceptions.ValidationException;
 
 namespace SignalChat.Backend.Middleware;
 
-public class GlobalExceptionHandler(IProblemDetailsService problemDetailsService) : IExceptionHandler
+public class GlobalExceptionHandler(IProblemDetailsService problemDetailsService, IWebHostEnvironment env) : IExceptionHandler
 {
+    private readonly IWebHostEnvironment _env = env;
+    
     public async ValueTask<bool> TryHandleAsync(
         HttpContext context,
         Exception exception,
@@ -15,7 +17,7 @@ public class GlobalExceptionHandler(IProblemDetailsService problemDetailsService
         context.Response.StatusCode = exception switch
         {
             AppException ex => ex.StatusCode,
-            _ => StatusCodes.Status500InternalServerError
+            _ => _env.IsDevelopment() ? throw exception : StatusCodes.Status500InternalServerError
         };
 
         ProblemDetails problemDetails = exception is ValidationException validationEx
