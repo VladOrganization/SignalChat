@@ -22,13 +22,14 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
             Id = Guid.NewGuid(),
             Text = request.Text,
             UserId = request.UserId,
-            Time = DateTime.UtcNow
+            Time = DateTime.UtcNow,
+            ImageUrl = request.Text
         };
 
         db.Messages.Add(message);
         await db.SaveChangesAsync(cancellationToken);
 
-        var dto = new MessageDto(message.Id, message.Text, user.UserName, message.Time);
+        var dto = new MessageDto(message.Id, message.Text, user.UserName, message.Time,message.ImageUrl);
 
         await hubContext.Clients.All.SendAsync("ReceiveMessage", dto, cancellationToken);
 

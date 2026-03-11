@@ -55,6 +55,7 @@ export interface MessageDto {
   text: string
   userName: string
   time: string
+  imageUrl:string
 }
 
 export interface PagedResult<T> {
@@ -96,4 +97,12 @@ export const api = {
     )
     return res.data
   },
+  async sendMessageImage(imageUrl: string) {
+    const res = await http.post<MessageDto>(
+      '/api/chat/images',
+      {imageUrl },
+      { headers: { 'X-Auth': '1' } },
+    )
+    return res.data
+  }
 }

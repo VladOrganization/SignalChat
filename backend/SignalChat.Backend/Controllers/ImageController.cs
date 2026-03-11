@@ -48,6 +48,6 @@ public class ImageController : ControllerBase
 
         await image.SaveAsWebpAsync(filePath);
 
-        return filePath;
+        return Path.Combine("images", fileName);
     }
 }

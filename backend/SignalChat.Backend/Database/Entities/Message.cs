@@ -7,4 +7,5 @@ public class Message
     public Guid UserId { get; set; }
     public User User { get; set; }
     public DateTime Time { get; set; }
+    public string ImageUrl { get; internal set; }
 }

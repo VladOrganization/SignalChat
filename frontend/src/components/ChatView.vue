@@ -24,9 +24,11 @@
           :class="{ own: msg.userName === auth.userName }"
         >
           <div class="bubble">
-            <span class="msg-author">{{ msg.userName }}</span>
-            <span class="msg-text">{{ msg.text }}</span>
+            <span  class="msg-author">{{ msg.userName }}</span>
+            <span class="msg-text">{{ msg.text }}-</span>
+            <span class="msg-text">{{ imagePath }}-</span>
             <span class="msg-time">{{ formatTime(msg.time) }}</span>
+            <img  :src="'https://localhost:7093/'+msg.imageUrl" alt="image">
           </div>
         </div>
       </template>
@@ -40,6 +42,9 @@
           placeholder="Введите сообщение..."
           @keydown.enter.exact.prevent="send"
         />
+          <input type="file" accept="image/*" @change="handleFileChange" />
+          <button @click="uploadImage" :disabled="!selectedFile">+</button>
+          <button @click="sendImage">-></button>
         <button type="submit" :disabled="sending || !text.trim()">Отправить</button>
       </form>
     </footer>
@@ -52,12 +57,57 @@ import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { startSignalR, stopSignalR } from '@/services/signalr'
+import axios from 'axios'
 
+
+const imagePath = ref();
+//import image
+// Реактивная переменная для хранения выбранного файла
+const selectedFile = ref(null)
+
+// Обработчик выбора файла
+const handleFileChange = (event) => {
+  selectedFile.value = event.target.files[0]
+}
+
+// Функция отправки файла на сервер
+const uploadImage = async () => {
+  if (!selectedFile.value) {
+    alert('Выберите файл')
+    return
+  }
+
+  const formData = new FormData()
+  // Ключ 'image' должен совпадать с ожидаемым на сервере
+  formData.append('file', selectedFile.value)
+
+  try {
+    const response = await axios.post('https://localhost:7093/api/image/save', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+      console.log('Файл загружен:', response.data)
+      return imagePath.value = response.data;
+    
+    
+    
+    // Дополнительная логика после успеха
+  } catch (error) {
+    console.error('Ошибка загрузки:', error)
+    alert('Не удалось загрузить изображение')
+  }
+}
+
+
+
+//end  import image
 const emit = defineEmits<{ (e: 'logout'): void }>()
 
 const auth = useAuthStore()
 const chat = useChatStore()
-
+//const itogUrl = 'https://localhost:7093/'+imagePath.value;
 const showCode = ref(false)
 const text = ref('')
 const sending = ref(false)
@@ -112,11 +162,26 @@ function onScroll() {
     loadMore()
   }
 }
-
-async function send() {
-  const val = text.value.trim()
+async function sendImage() {
+  
+  const val = imagePath.value.trim()
   if (!val || sending.value) return
 
+  sending.value = true
+  try {
+    await api.sendMessageImage(val)
+    imagePath.value = ''
+  } catch {
+    // message arrives via SignalR so just clear on success
+  } finally {
+    sending.value = false
+  }
+  
+}
+async function send() {
+  
+  const val = text.value.trim()
+  if (!val || sending.value) return
   sending.value = true
   try {
     await api.sendMessage(val)

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SignalChat.Backend.Database;
@@ -11,9 +12,11 @@ using SignalChat.Backend.Database;
 namespace SignalChat.Backend.Migrations
 {
     [DbContext(typeof(ChatDbContext))]
-    partial class ChatDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260311080712_fix")]
+    partial class fix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -49,7 +52,7 @@ namespace SignalChat.Backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.User", b =>
@@ -86,7 +89,7 @@ namespace SignalChat.Backend.Migrations
                     b.HasIndex("UserName")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Message", b =>

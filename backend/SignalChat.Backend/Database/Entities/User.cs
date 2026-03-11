@@ -7,4 +7,5 @@ public class User
     public string Code { get; set; }
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiry { get; set; }
+    public string? ImageUrl { get; set; }
 }
