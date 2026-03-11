@@ -89,10 +89,10 @@ export const api = {
     return res.data
   },
 
-  async sendMessage(text: string) {
+  async sendMessage(text: string,imageUrl:string) {
     const res = await http.post<MessageDto>(
       '/api/chat/messages',
-      { text },
+      { text ,imageUrl},
       { headers: { 'X-Auth': '1' } },
     )
     return res.data

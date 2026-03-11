@@ -25,10 +25,9 @@
         >
           <div class="bubble">
             <span  class="msg-author">{{ msg.userName }}</span>
-            <span class="msg-text">{{ msg.text }}-</span>
-            <span class="msg-text">{{ imagePath }}-</span>
+            <span class="msg-text">{{ msg.text }}</span>
             <span class="msg-time">{{ formatTime(msg.time) }}</span>
-            <img  :src="'https://localhost:7093/'+msg.imageUrl" alt="image">
+            <img  :src="msg.imageUrl" alt="image">
           </div>
         </div>
       </template>
@@ -44,8 +43,7 @@
         />
           <input type="file" accept="image/*" @change="handleFileChange" />
           <button @click="uploadImage" :disabled="!selectedFile">+</button>
-          <button @click="sendImage">-></button>
-        <button type="submit" :disabled="sending || !text.trim()">Отправить</button>
+        <button type="submit" :disabled="sending || !text.trim()|| !selectedFile">Отправить</button>
       </form>
     </footer>
   </div>
@@ -87,12 +85,12 @@ const uploadImage = async () => {
         'Content-Type': 'multipart/form-data'
       }
     })
-    
+
       console.log('Файл загружен:', response.data)
       return imagePath.value = response.data;
-    
-    
-    
+
+
+
     // Дополнительная логика после успеха
   } catch (error) {
     console.error('Ошибка загрузки:', error)
@@ -162,30 +160,16 @@ function onScroll() {
     loadMore()
   }
 }
-async function sendImage() {
-  
-  const val = imagePath.value.trim()
-  if (!val || sending.value) return
 
-  sending.value = true
-  try {
-    await api.sendMessageImage(val)
-    imagePath.value = ''
-  } catch {
-    // message arrives via SignalR so just clear on success
-  } finally {
-    sending.value = false
-  }
-  
-}
 async function send() {
-  
+
   const val = text.value.trim()
   if (!val || sending.value) return
   sending.value = true
   try {
-    await api.sendMessage(val)
+    await api.sendMessage(val,`https://localhost:7093/${imagePath.value}`)
     text.value = ''
+    imagePath.value = ''
   } catch {
     // message arrives via SignalR so just clear on success
   } finally {

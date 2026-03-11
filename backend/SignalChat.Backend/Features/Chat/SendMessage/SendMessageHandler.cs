@@ -23,7 +23,7 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
             Text = request.Text,
             UserId = request.UserId,
             Time = DateTime.UtcNow,
-            ImageUrl = request.Text
+            ImageUrl = request.ImageUrl
         };
 
         db.Messages.Add(message);

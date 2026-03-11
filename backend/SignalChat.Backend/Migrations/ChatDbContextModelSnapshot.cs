@@ -29,7 +29,6 @@ namespace SignalChat.Backend.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("ImageUrl")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Text")
@@ -49,7 +48,7 @@ namespace SignalChat.Backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.User", b =>
@@ -86,7 +85,7 @@ namespace SignalChat.Backend.Migrations
                     b.HasIndex("UserName")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Message", b =>

@@ -27,17 +27,6 @@ public class ChatController(ISender sender) : ControllerBase
         if (!Guid.TryParse(userIdStr, out var userId))
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new SendMessageCommand(userId, request.Text), ct);
-    }
-
-    [Authorize]
-    [HttpPost("images")]
-    public Task<MessageDto> SendMessageImage([FromBody] SendMessageRequest request, CancellationToken ct)
-    {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(userIdStr, out var userId))
-            throw new UnauthorizedException("Пользователь не авторизован");
-
-        return sender.Send(new SendMessageCommand(userId, request.ImageUrl), ct);
+        return sender.Send(new SendMessageCommand(userId, request.Text,request.ImageUrl), ct);
     }
 }

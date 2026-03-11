@@ -5,7 +5,7 @@
 namespace SignalChat.Backend.Migrations
 {
     /// <inheritdoc />
-    public partial class fix : Migration
+    public partial class @fixed : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,8 +14,7 @@ namespace SignalChat.Backend.Migrations
                 name: "ImageUrl",
                 table: "Messages",
                 type: "text",
-                nullable: false,
-                defaultValue: "");
+                nullable: true);
         }
 
         /// <inheritdoc />

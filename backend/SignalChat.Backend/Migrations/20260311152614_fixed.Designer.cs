@@ -12,8 +12,8 @@ using SignalChat.Backend.Database;
 namespace SignalChat.Backend.Migrations
 {
     [DbContext(typeof(ChatDbContext))]
-    [Migration("20260311080712_fix")]
-    partial class fix
+    [Migration("20260311152614_fixed")]
+    partial class @fixed
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -32,7 +32,6 @@ namespace SignalChat.Backend.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("ImageUrl")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Text")
