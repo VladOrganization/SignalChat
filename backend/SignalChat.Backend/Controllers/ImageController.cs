@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Web;
 
 namespace SignalChat.Backend.Controllers;
 
@@ -16,38 +17,46 @@ public class ImageController : ControllerBase
     }
 
     [HttpPost("save")]
-    public async Task<ActionResult<string>> UploadAvatar(IFormFile file)
+    public async Task<ActionResult<List<string>>> UploadAvatar(List<IFormFile> file)
     {
-        if (file.Length == 0)
-        {
-            return BadRequest("File is empty");
-        }
-
         string[] availableFormats = [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".avif", ".gif"];
-
-        if (!availableFormats.Contains(Path.GetExtension(file.FileName).ToLower()))
-        {
-            return BadRequest("File format not supported");
+        List<string> paths = new List<string>();
+        if (file.Count > 9) {
+            return BadRequest("many files uploaded");
         }
-
-        if (file.Length > 20_000_000)
+        foreach (var format in file)
         {
-            return BadRequest("File is too large");
-        }
+            if (format.Length == 0)
+            {
+                return BadRequest("File is empty");
+            }
+            
+            if (!availableFormats.Contains(Path.GetExtension(format.FileName).ToLower()))
+            {
+                return BadRequest("File format not supported");
+            }
 
+            if (format.Length > 20_000_000)
+            {
+                return BadRequest("File is too large");
+            }
+        }
         var avatarsDir = Path.Combine(_env.WebRootPath, "images");
 
-        var fileName = $"{Guid.CreateVersion7()}.webp";
-        var filePath = Path.Combine(avatarsDir, fileName);
+        foreach (var item in file)
+        {
+            var fileName = $"{Guid.CreateVersion7()}.webp";
+            var filePath = Path.Combine(avatarsDir, fileName);
+            using var image = await Image.LoadAsync(item.OpenReadStream());
 
-        using var image = await Image.LoadAsync(file.OpenReadStream());
+            image.Mutate(x => x
+                .Resize(600, 0)
+            );
+            await image.SaveAsWebpAsync(filePath);
+            paths.Add(Path.Combine("images", fileName));
+        }
+
+        return paths;
         
-        image.Mutate(x => x
-            .Resize(600, 0)
-        );
-
-        await image.SaveAsWebpAsync(filePath);
-
-        return Path.Combine("images", fileName);
     }
 }

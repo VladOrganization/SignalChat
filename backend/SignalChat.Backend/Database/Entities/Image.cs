@@ -1,10 +1,10 @@
 ﻿namespace SignalChat.Backend.Database.Entities
 {
-    public class Images
+    public class Image
     {
-        public Guid id { get; set; }
+        public Guid Id { get; set; }
         public string ImageUrl {  get; set; }
-
         public Guid MessageId { get; set; }
+        public Message Message { get; set; }
     }
 }
