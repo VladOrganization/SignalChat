@@ -16,20 +16,23 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken)
             ?? throw new UnauthorizedException("Пользователь не найден");
-
+        
+        var id = Guid.NewGuid();
+        var images = request.Images.Select(x => new Image {ImageUrl = x, MessageId = id }).ToList();
+       
         var message = new Message
         {
-            Id = Guid.NewGuid(),
+            Id = id,
             Text = request.Text,
             UserId = request.UserId,
             Time = DateTime.UtcNow,
-            ImageUrl = request.ImageUrl
+            Images = images
         };
 
         db.Messages.Add(message);
         await db.SaveChangesAsync(cancellationToken);
 
-        var dto = new MessageDto(message.Id, message.Text, user.UserName, message.Time,message.ImageUrl);
+        var dto = new MessageDto(message.Id, message.Text, user.UserName, message.Time,message.Images.Select(x=>x.ImageUrl).ToList());
 
         await hubContext.Clients.All.SendAsync("ReceiveMessage", dto, cancellationToken);
 
