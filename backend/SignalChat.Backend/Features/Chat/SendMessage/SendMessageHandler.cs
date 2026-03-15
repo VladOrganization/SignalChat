@@ -19,7 +19,7 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
         
         var id = Guid.NewGuid();
         var images = request.Images.Select(x => new Image {ImageUrl = x, MessageId = id }).ToList();
-       
+        
         var message = new Message
         {
             Id = id,
@@ -27,12 +27,19 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
             UserId = request.UserId,
             Time = DateTime.UtcNow,
             Images = images
+          
         };
 
         db.Messages.Add(message);
         await db.SaveChangesAsync(cancellationToken);
 
-        var dto = new MessageDto(message.Id, message.Text, user.UserName, message.Time,message.Images.Select(x=>x.ImageUrl).ToList());
+        var dto = new MessageDto(message.Id,
+            message.Text,
+            user.UserName,
+            message.Time,
+            message.Images.Select(x=>x.ImageUrl).ToList(),
+            request.Reactions
+            );
 
         await hubContext.Clients.All.SendAsync("ReceiveMessage", dto, cancellationToken);
 
