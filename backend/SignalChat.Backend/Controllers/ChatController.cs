@@ -39,6 +39,6 @@ public class ChatController(ISender sender) : ControllerBase
         if (!Guid.TryParse(userIdStr, out var userId))
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new ReactionMessageCommand(userId, request.MessageId,request.Reactions), ct);
+        return sender.Send(new ReactionMessageCommand(request.MessageId, userId, request.Reactions), ct);
     }
 }
