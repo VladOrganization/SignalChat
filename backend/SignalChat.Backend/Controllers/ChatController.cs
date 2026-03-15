@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SignalChat.Backend.Database.Entities.Enums;
 using SignalChat.Backend.Exceptions;
 using SignalChat.Backend.Features.Chat.GetMessages;
 using SignalChat.Backend.Features.Chat.ReactionMessage;
@@ -33,7 +34,7 @@ public class ChatController(ISender sender) : ControllerBase
 
     [Authorize]
     [HttpPut("reactions")]
-    public Task<MessageDto> ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
+    public Task<ReactionEnum> ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdStr, out var userId))
