@@ -1,3 +1,5 @@
+using SignalChat.Backend.Database.Entities.Enums;
+
 namespace SignalChat.Backend.Models;
 
-public record SendMessageRequest(string Text,List<string>? ImageUrl,List<int> Reactions);
+public record SendMessageRequest(string Text,List<string>? ImageUrl,List<ReactionEnum> Reactions);

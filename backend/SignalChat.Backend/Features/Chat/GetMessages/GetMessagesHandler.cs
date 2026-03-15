@@ -14,7 +14,9 @@ public class GetMessagesHandler(ChatDbContext db) : IRequestHandler<GetMessagesQ
             .OrderByDescending(m => m.Time)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(m => new MessageDto(m.Id, m.Text, m.User.UserName, m.Time,m.Images.Select(x=>x.ImageUrl).ToList()))
+            .Select(m => new MessageDto(m.Id, m.Text, m.User.UserName, m.Time,m.Images.Select(x=>x.ImageUrl).ToList(),
+            m.Reaction.Select(r=>r.Reactions).ToList()
+            ))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<MessageDto>(items, totalCount, request.Page, request.PageSize);

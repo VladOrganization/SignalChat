@@ -17,28 +17,34 @@ namespace SignalChat.Backend.Features.Chat.ReactionMessage
             var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken)
             ?? throw new UnauthorizedException("Пользователь не найден");
 
-            var id = Guid.NewGuid();
+          
 
             var reaction = new Message
             {
                 Id=request.MessageId,
-                Reaction = request.Reactions,
+                Reaction = request.Reactions.Select(x=> new Reaction { Reactions = x}).ToList(),
                 UserId=user.Id,
 
             };
 
             db.Messages.Update(reaction);
 
-            db.SaveChanges();
+            await db.SaveChangesAsync(cancellationToken);
 
-            
 
-           
+
+
             await hubContext.Clients.All.SendAsync("ReceiveMessage", reaction, cancellationToken);
 
-            return re;
+            return new MessageDto(reaction.Id,
+                reaction.Text,
+                user.UserName,
+                reaction.Time,
+                reaction.Images.Select(x => x.ImageUrl).ToList(),
+                request.Reactions.Select(x => x).ToList()
+            );
 
-            
+
         }
     }
 }

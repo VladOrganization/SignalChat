@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SignalChat.Backend.Exceptions;
 using SignalChat.Backend.Features.Chat.GetMessages;
+using SignalChat.Backend.Features.Chat.ReactionMessage;
 using SignalChat.Backend.Features.Chat.SendMessage;
 using SignalChat.Backend.Models;
 
@@ -27,6 +28,17 @@ public class ChatController(ISender sender) : ControllerBase
         if (!Guid.TryParse(userIdStr, out var userId))
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new SendMessageCommand(userId, request.Text,request.ImageUrl), ct);
+        return sender.Send(new SendMessageCommand(userId, request.Text,request.ImageUrl,request.Reactions), ct);
+    }
+
+    [Authorize]
+    [HttpPut("reactions")]
+    public Task<MessageDto> ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var userId))
+            throw new UnauthorizedException("Пользователь не авторизован");
+        
+        return sender.Send(new ReactionMessageCommand(userId, request.MessageId,request.Reactions), ct);
     }
 }
