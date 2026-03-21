@@ -10,7 +10,7 @@
       <button class="logout-btn" @click="logout">Выйти</button>
     </header>
 
-    <main ref="messagesEl" class="messages" @scroll="onScroll">
+    <main ref="messages" class="messages" @scroll="onScroll">
       <div v-if="loading" class="status">Загрузка сообщений...</div>
       <div v-else-if="chat.messages.length === 0" class="status">
         Нет сообщений. Напишите первым!
@@ -24,94 +24,97 @@
           :class="{ own: msg.userName === auth.userName }"
         >
           <div class="bubble">
-            <span  class="msg-author">{{ msg.userName }}</span>
+            <span class="msg-author">{{ msg.userName }}</span>
             <span class="msg-text">{{ msg.text }}</span>
             <span class="msg-time">{{ formatTime(msg.time) }}</span>
-            <img  :src="msg.imageUrl" alt="image">
+            <img
+              v-for="image in msg.images"
+              :key="image"
+              :src="`${baseURL}/${image}`"
+              alt="image"
+            />
           </div>
         </div>
       </template>
     </main>
 
     <footer class="chat-footer">
+      <ImagePreviewGrid :images @remove="removeFile" />
       <form @submit.prevent="send">
         <input
-          v-model="text"
+          v-model.trim="textModel"
           type="text"
           placeholder="Введите сообщение..."
           @keydown.enter.exact.prevent="send"
         />
-          <input type="file" accept="image/*" @change="handleFileChange" />
-          <button @click="uploadImage" :disabled="!selectedFile">+</button>
-        <button type="submit" :disabled="sending || !text.trim()|| !selectedFile">Отправить</button>
+        <ImageUploadButton @select="addFiles" :disabled="images.length >= 9" />
+        <button type="submit" :disabled="sending || (!textModel && images.length == 0)">
+          Отправить
+        </button>
       </form>
     </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch, useTemplateRef } from 'vue'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { startSignalR, stopSignalR } from '@/services/signalr'
-import axios from 'axios'
+import ImageUploadButton from '@/components/ImageUploadButton.vue'
+import ImagePreviewGrid from '@/components/ImagePreviewGrid.vue'
 
+const images = ref<ImageFile[]>([])
+let idCounter = 0
 
-const imagePath = ref();
-//import image
-// Реактивная переменная для хранения выбранного файла
-const selectedFile = ref(null)
-
-// Обработчик выбора файла
-const handleFileChange = (event) => {
-  selectedFile.value = event.target.files[0]
+export interface ImageFile {
+  id: string
+  name: string
+  url: string
+  file: File
 }
 
-// Функция отправки файла на сервер
-const uploadImage = async () => {
-  if (!selectedFile.value) {
-    alert('Выберите файл')
+function addFiles(files: File[]) {
+  for (const file of files) {
+    const url = URL.createObjectURL(file)
+
+    if (images.value.length >= 9) {
+      return
+    }
+
+    images.value.push({
+      id: String(idCounter++),
+      name: file.name,
+      url,
+      file, // оригинальный File-объект, если нужен для отправки на сервер
+    })
+  }
+}
+
+function removeFile(index: number) {
+  const [removed] = images.value.splice(index, 1)
+
+  if (!removed) {
     return
   }
 
-  const formData = new FormData()
-  // Ключ 'image' должен совпадать с ожидаемым на сервере
-  formData.append('file', selectedFile.value)
-
-  try {
-    const response = await axios.post('https://localhost:7093/api/image/save', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-
-      console.log('Файл загружен:', response.data)
-      return imagePath.value = response.data;
-
-
-
-    // Дополнительная логика после успеха
-  } catch (error) {
-    console.error('Ошибка загрузки:', error)
-    alert('Не удалось загрузить изображение')
-  }
+  URL.revokeObjectURL(removed.url)
 }
-
-
 
 //end  import image
 const emit = defineEmits<{ (e: 'logout'): void }>()
 
+const baseURL = import.meta.env.VITE_API_BASE_URL as string
+
 const auth = useAuthStore()
 const chat = useChatStore()
-//const itogUrl = 'https://localhost:7093/'+imagePath.value;
 const showCode = ref(false)
-const text = ref('')
+const textModel = ref('')
 const sending = ref(false)
 const loading = ref(true)
 const loadingMore = ref(false)
-const messagesEl = ref<HTMLElement | null>(null)
+const messagesRef = useTemplateRef('messages')
 
 function formatTime(iso: string) {
   const d = new Date(iso)
@@ -120,8 +123,8 @@ function formatTime(iso: string) {
 
 async function scrollToBottom() {
   await nextTick()
-  if (messagesEl.value) {
-    messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+  if (messagesRef.value) {
+    messagesRef.value.scrollTop = messagesRef.value.scrollHeight
   }
 }
 
@@ -139,7 +142,7 @@ async function loadMore() {
   if (!chat.hasMore || loadingMore.value) return
   loadingMore.value = true
 
-  const el = messagesEl.value!
+  const el = messagesRef.value!
   const prevScrollHeight = el.scrollHeight
   const prevScrollTop = el.scrollTop
 
@@ -154,7 +157,7 @@ async function loadMore() {
 }
 
 function onScroll() {
-  const el = messagesEl.value
+  const el = messagesRef.value
   if (!el || loadingMore.value || !chat.hasMore) return
   if (el.scrollTop <= 100) {
     loadMore()
@@ -162,19 +165,29 @@ function onScroll() {
 }
 
 async function send() {
+  const val = textModel.value
 
-  const val = text.value.trim()
-  if (!val || sending.value) return
+  let imagesPath: string[] = []
+  if (images.value.length > 0) {
+    imagesPath = (await loadImages()) as string[]
+  }
+
+  if (!val && imagesPath.length == 0) return
+
   sending.value = true
   try {
-    await api.sendMessage(val,`https://localhost:7093/${imagePath.value}`)
-    text.value = ''
-    imagePath.value = ''
+    await api.sendMessage(val, imagesPath)
+    textModel.value = ''
+    images.value = []
   } catch {
     // message arrives via SignalR so just clear on success
   } finally {
     sending.value = false
   }
+}
+
+async function loadImages() {
+  return await api.sendMessageImages(images.value.map((i) => i.file))
 }
 
 function logout() {

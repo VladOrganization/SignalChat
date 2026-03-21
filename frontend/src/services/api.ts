@@ -55,7 +55,7 @@ export interface MessageDto {
   text: string
   userName: string
   time: string
-  imageUrl:string
+  images: string[]
 }
 
 export interface PagedResult<T> {
@@ -89,20 +89,28 @@ export const api = {
     return res.data
   },
 
-  async sendMessage(text: string,imageUrl:string) {
+  async sendMessage(text: string, imageUrl: string[]) {
     const res = await http.post<MessageDto>(
       '/api/chat/messages',
-      { text ,imageUrl},
+      { text, imageUrl },
       { headers: { 'X-Auth': '1' } },
     )
     return res.data
   },
-  async sendMessageImage(imageUrl: string) {
-    const res = await http.post<MessageDto>(
-      '/api/chat/images',
-      {imageUrl },
-      { headers: { 'X-Auth': '1' } },
-    )
-    return res.data
-  }
+  async sendMessageImages(images: File[]) {
+    const formData = new FormData()
+
+    images.forEach((file) => {
+      formData.append('file', file)
+    })
+
+    const response = await http.post<string[]>('/api/image/save', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'X-Auth': '1',
+      },
+    })
+
+    return response.data
+  },
 }
