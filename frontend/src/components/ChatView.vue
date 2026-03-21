@@ -17,24 +17,16 @@
       </div>
       <template v-else>
         <div v-if="loadingMore" class="status load-more-status">Загрузка...</div>
-        <div
+        <MessageBubble
           v-for="msg in chat.messages"
           :key="msg.id"
-          class="message"
-          :class="{ own: msg.userName === auth.userName }"
-        >
-          <div class="bubble">
-            <span class="msg-author">{{ msg.userName }}</span>
-            <span class="msg-text">{{ msg.text }}</span>
-            <span class="msg-time">{{ formatTime(msg.time) }}</span>
-            <img
-              v-for="image in msg.images"
-              :key="image"
-              :src="`${baseURL}/${image}`"
-              alt="image"
-            />
-          </div>
-        </div>
+          :message="{
+            text: msg.text,
+            time: formatTime(msg.time),
+            own: msg.userName === auth.userName,
+            images: msg.images,
+          }"
+        />
       </template>
     </main>
 
@@ -64,6 +56,7 @@ import { useChatStore } from '@/stores/chat'
 import { startSignalR, stopSignalR } from '@/services/signalr'
 import ImageUploadButton from '@/components/ImageUploadButton.vue'
 import ImagePreviewGrid from '@/components/ImagePreviewGrid.vue'
+import MessageBubble from '@/components/MessageBubble.vue'
 
 const images = ref<ImageFile[]>([])
 let idCounter = 0
@@ -104,8 +97,6 @@ function removeFile(index: number) {
 
 //end  import image
 const emit = defineEmits<{ (e: 'logout'): void }>()
-
-const baseURL = import.meta.env.VITE_API_BASE_URL as string
 
 const auth = useAuthStore()
 const chat = useChatStore()
@@ -169,6 +160,7 @@ async function send() {
 
   let imagesPath: string[] = []
   if (images.value.length > 0) {
+    sending.value = true
     imagesPath = (await loadImages()) as string[]
   }
 
