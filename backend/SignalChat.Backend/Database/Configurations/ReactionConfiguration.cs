@@ -14,7 +14,7 @@ namespace SignalChat.Backend.Database.Configurations
             builder.Property(x => x.MessageId)
                 .IsRequired();
 
-            builder.Property(x => x.Reactions)
+            builder.Property(x => x.Emoji)
                 .IsRequired();
 
 

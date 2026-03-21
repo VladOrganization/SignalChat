@@ -33,8 +33,8 @@ public class ChatController(ISender sender) : ControllerBase
     }
 
     [Authorize]
-    [HttpPut("reactions")]
-    public Task<ReactionEnum> ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
+    [HttpPost("reactions")]
+    public Task ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdStr, out var userId))

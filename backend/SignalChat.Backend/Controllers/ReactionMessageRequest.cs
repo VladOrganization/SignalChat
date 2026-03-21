@@ -3,6 +3,6 @@ using SignalChat.Backend.Database.Entities.Enums;
 
 namespace SignalChat.Backend.Controllers
 {
-    public record ReactionMessageRequest(Guid MessageId, List<ReactionEnum> Reactions);
+    public record ReactionMessageRequest(Guid MessageId, ReactionEnum Reactions);
     
 }

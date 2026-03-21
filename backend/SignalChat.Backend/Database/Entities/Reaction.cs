@@ -6,7 +6,7 @@ namespace SignalChat.Backend.Database.Entities
     {
         public Guid Id { get; set; }
 
-        public ReactionEnum Reactions {  get; set; }
+        public ReactionEnum Emoji {  get; set; }
 
         public Message Message { get; set; }
 
