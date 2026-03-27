@@ -11,5 +11,7 @@ namespace SignalChat.Backend.Database.Entities
         public Message Message { get; set; }
 
         public Guid MessageId { get; set; }
+        public User User { get; set; }
+        public Guid UserId {  get; set; }
     }
 }
