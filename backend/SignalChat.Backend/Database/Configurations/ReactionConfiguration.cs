@@ -23,6 +23,11 @@ namespace SignalChat.Backend.Database.Configurations
                 .HasForeignKey(x=>x.MessageId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.HasOne(x => x.User)
+                .WithMany(x => x.Reaction)
+                .HasForeignKey(x=>x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
             builder.HasIndex(x=>x.MessageId);
         }
     }
