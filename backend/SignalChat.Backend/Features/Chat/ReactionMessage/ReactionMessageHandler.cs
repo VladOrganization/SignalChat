@@ -17,16 +17,22 @@ namespace SignalChat.Backend.Features.Chat.ReactionMessage
         {
             var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken)
             ?? throw new UnauthorizedException("Пользователь не найден");
+            var userInfo = await db.Reactions.FirstOrDefaultAsync(u => u.UserId == user.Id&&u.MessageId == request.MessageId,cancellationToken);
+            Console.WriteLine(userInfo);
+            if (userInfo.Emoji == request.Reaction)
+            {
+                throw new Exception("Вы уже ставили эту реакцию на это сообшение");
+            }
+            if (userInfo.Emoji != request.Reaction)
+            {
+                db.Reactions.Update(new Reaction
+                {
+                    MessageId = request.MessageId,
+                    Emoji = request.Reaction,
+                    Id = Guid.NewGuid(),
+                });
+            }
 
-            db.Reactions.Add(new Reaction {
-                MessageId = request.MessageId,
-                Emoji = request.Reaction,
-                Id = Guid.NewGuid(),
-            });
-
-            
-           
-           
 
             await db.SaveChangesAsync(cancellationToken);
 

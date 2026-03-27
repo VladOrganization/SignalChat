@@ -29,6 +29,7 @@ namespace SignalChat.Backend.Database.Configurations
                 .OnDelete(DeleteBehavior.Cascade);
                 
             builder.HasIndex(x=>x.MessageId);
+            builder.HasIndex(x=>x.UserId);
         }
     }
 }

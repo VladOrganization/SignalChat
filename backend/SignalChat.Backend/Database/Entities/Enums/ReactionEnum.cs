@@ -2,6 +2,7 @@
 {
     public enum ReactionEnum
     {
+        None,
         Like,
         Heart,
         Clown,
