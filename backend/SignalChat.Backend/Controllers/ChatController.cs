@@ -18,7 +18,7 @@ public class ChatController(ISender sender) : ControllerBase
 {
     [Authorize]
     [HttpGet("messages")]
-    public Task<PagedResult<MessageDto>> GetMessages([FromQuery] GetMessagesQuery query, CancellationToken ct)
+    public Task<PagedResult<GetMessageResponse>> GetMessages([FromQuery] GetMessagesQuery query, CancellationToken ct)
         => sender.Send(query, ct);
     
     [Authorize]
@@ -34,7 +34,7 @@ public class ChatController(ISender sender) : ControllerBase
 
     [Authorize]
     [HttpPost("reactions")]
-    public Task ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
+    public Task ReactionMessage([FromBody] ReactionMessageResponse request, CancellationToken ct)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdStr, out var userId))

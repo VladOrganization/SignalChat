@@ -17,12 +17,12 @@ namespace SignalChat.Backend.Features.Chat.ReactionMessage
         {
             var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken)
             ?? throw new UnauthorizedException("Пользователь не найден");
-            var userInfo = await db.Reactions.FirstOrDefaultAsync(u => u.UserId == user.Id&&u.MessageId == request.MessageId,cancellationToken);
-            Console.WriteLine(userInfo);
+            var reaction = await db.Reactions.FirstOrDefaultAsync(u => u.UserId == user.Id&&u.MessageId == request.MessageId,cancellationToken);
+            Console.WriteLine(reaction);
 
             
             var id = Guid.NewGuid();
-            if (userInfo == null) {
+            if (reaction == null) {
                 db.Reactions.Add(new Reaction
                 {
                     MessageId = request.MessageId,
@@ -31,17 +31,11 @@ namespace SignalChat.Backend.Features.Chat.ReactionMessage
                     UserId = request.UserId
                 });
             }
-            else if (userInfo.Emoji != request.Reaction)
+            else if (reaction.Emoji != request.Reaction)
             {
-                var oldReactions = db.Reactions.Where(x => x.UserId == request.UserId && x.MessageId == request.MessageId); 
-                db.Reactions.Update(new Reaction
-                {
-                    Emoji = request.Reaction,
-                    MessageId = request.MessageId,
-                    UserId= request.UserId
-                });
+                reaction.Emoji = request.Reaction;
             }
-            else if (userInfo.Emoji == request.Reaction)
+            else if (reaction.Emoji == request.Reaction)
             {
                 var oldReactions = db.Reactions.Where(x => x.UserId == request.UserId && x.MessageId == request.MessageId);
                 
