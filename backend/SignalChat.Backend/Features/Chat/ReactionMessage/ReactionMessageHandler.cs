@@ -19,22 +19,39 @@ namespace SignalChat.Backend.Features.Chat.ReactionMessage
             ?? throw new UnauthorizedException("Пользователь не найден");
             var userInfo = await db.Reactions.FirstOrDefaultAsync(u => u.UserId == user.Id&&u.MessageId == request.MessageId,cancellationToken);
             Console.WriteLine(userInfo);
-            if (userInfo.Emoji == request.Reaction)
-            {
-                throw new Exception("Вы уже ставили эту реакцию на это сообшение");
-            }
-            if (userInfo.Emoji != request.Reaction)
-            {
-                db.Reactions.Update(new Reaction
+
+            
+            var id = Guid.NewGuid();
+            if (userInfo == null) {
+                db.Reactions.Add(new Reaction
                 {
                     MessageId = request.MessageId,
                     Emoji = request.Reaction,
-                    Id = Guid.NewGuid(),
+                    Id = id,
+                    UserId = request.UserId
                 });
             }
-
+            else if (userInfo.Emoji != request.Reaction)
+            {
+                var oldReactions = db.Reactions.Where(x => x.UserId == request.UserId && x.MessageId == request.MessageId); 
+                db.Reactions.Update(new Reaction
+                {
+                    Emoji = request.Reaction,
+                    MessageId = request.MessageId,
+                    UserId= request.UserId
+                });
+            }
+            else if (userInfo.Emoji == request.Reaction)
+            {
+                var oldReactions = db.Reactions.Where(x => x.UserId == request.UserId && x.MessageId == request.MessageId);
+                
+                throw new Exception("Вы уже ставили эту реакцию на это сообшение");
+            }
 
             await db.SaveChangesAsync(cancellationToken);
+
+
+            
 
             await hubContext.Clients.All.SendAsync("RecieveReaction", request.Reaction, cancellationToken);
         }
