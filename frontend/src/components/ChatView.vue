@@ -28,6 +28,7 @@
             <span class="msg-text">{{ msg.text }}</span>
             <span class="msg-time">{{ formatTime(msg.time) }}</span>
             <img  :src="msg.imageUrl" alt="image">
+            <ReactionMessage></ReactionMessage>
           </div>
         </div>
       </template>
@@ -55,6 +56,7 @@ import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { startSignalR, stopSignalR } from '@/services/signalr'
+import ReactionMessage from './ReactionMessage.vue'
 import axios from 'axios'
 
 
