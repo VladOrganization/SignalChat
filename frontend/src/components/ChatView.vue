@@ -44,7 +44,7 @@
         />
           <input type="file" accept="image/*" @change="handleFileChange" />
           <button @click="uploadImage" :disabled="!selectedFile">+</button>
-        <button type="submit" :disabled="sending || !text.trim()|| !selectedFile">Отправить</button>
+        <button type="submit" :disabled="sending || !text.trim()">Отправить</button>
       </form>
     </footer>
   </div>

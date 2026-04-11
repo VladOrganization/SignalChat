@@ -135,6 +135,25 @@ public class ChatControllerTests(IntegrationTestFactory factory)
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+    // ----ReactionMessage-----------------------------------------------------
+    [Fact]
+    public async Task ReactionMessage_WithoutAuth_Returns401()
+    {
+        var res = await _client.PostAsJsonAsync("/api/chat/reactions",new {reactions=1});
+        Assert.Equal(HttpStatusCode.Unauthorized,res.StatusCode);
+    }
+
+    [Fact]
+    public async Task ReactionMessage_Returns200()
+    {
+        var token = await RegisterAndGetTokenAsync("Alice");
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var responce = await _client.PostAsJsonAsync("api/chat/rections", new { reaction = 1 });
+        Assert.Equal(HttpStatusCode.OK, responce.StatusCode);
+
+    }
 
     // ─── SendMessage ─────────────────────────────────────────────────────────
 
