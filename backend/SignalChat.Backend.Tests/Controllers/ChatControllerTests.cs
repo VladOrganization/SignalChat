@@ -150,8 +150,13 @@ public class ChatControllerTests(IntegrationTestFactory factory)
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
-        var responce = await _client.PostAsJsonAsync("api/chat/rections", new { reaction = 1 });
-        Assert.Equal(HttpStatusCode.OK, responce.StatusCode);
+        var messageResponse = await _client.PostAsJsonAsync("/api/chat/messages", new { text = "Hello" });
+
+        var body = await messageResponse.Content.ReadFromJsonAsync<MessageDto>();
+        Assert.Equal(HttpStatusCode.OK, messageResponse.StatusCode);
+       
+        var responce = await _client.PostAsJsonAsync("api/chat/rections", new { messageId = body.Id,reaction = 1 });
+
 
     }
 

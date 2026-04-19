@@ -18,7 +18,7 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
             ?? throw new UnauthorizedException("Пользователь не найден");
         
         var id = Guid.NewGuid();
-        var images = request.Images.Select(x => new Image {ImageUrl = x, MessageId = id }).ToList();
+        var images = request.Images?.Select(x => new Image {ImageUrl = x, MessageId = id }).ToList();
         
         var message = new Message
         {
@@ -26,10 +26,9 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
             Text = request.Text,
             UserId = request.UserId,
             Time = DateTime.UtcNow,
-            Images = images
-          
+            Images = images ?? []
         };
-
+        
         db.Messages.Add(message);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -38,7 +37,7 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
             user.UserName,
             message.Time,
             message.Images.Select(x=>x.ImageUrl).ToList(),
-            request.Reactions
+            []
             );
 
         await hubContext.Clients.All.SendAsync("ReceiveMessage", dto, cancellationToken);
