@@ -39,7 +39,7 @@ namespace SignalChat.Backend.Features.Chat.ReactionMessage
             {
                 var oldReactions = db.Reactions.Where(x => x.UserId == request.UserId && x.MessageId == request.MessageId);
                 
-                throw new Exception("Вы уже ставили эту реакцию на это сообшение");
+                throw new ConflictException("Вы уже ставили эту реакцию на это сообшение");
             }
 
             await db.SaveChangesAsync(cancellationToken);

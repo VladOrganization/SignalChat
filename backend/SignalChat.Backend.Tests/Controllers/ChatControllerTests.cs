@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SignalChat.Backend.Controllers;
 using SignalChat.Backend.Database;
 using SignalChat.Backend.Database.Entities;
 using SignalChat.Backend.Models;
@@ -155,11 +156,27 @@ public class ChatControllerTests(IntegrationTestFactory factory)
         var body = await messageResponse.Content.ReadFromJsonAsync<MessageDto>();
         Assert.Equal(HttpStatusCode.OK, messageResponse.StatusCode);
        
-        var responce = await _client.PostAsJsonAsync("api/chat/rections", new { messageId = body.Id,reaction = 1 });
+        var responce = await _client.PostAsJsonAsync("/api/chat/reactions", new { messageId = body.Id,reaction = 1 });
 
 
     }
+    [Fact]
+    public async Task ReactionMessage_WithDoubleReaction_Returns409() {
+        var token = await RegisterAndGetTokenAsync("Alice");
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
 
+        var messageResponse = await _client.PostAsJsonAsync("/api/chat/messages", new { text = "Hello" });
+
+        var body = await messageResponse.Content.ReadFromJsonAsync<MessageDto>();
+
+        
+        var FirstReactionResponse = await _client.PostAsJsonAsync("/api/chat/reactions", new { messageId = body.Id, reaction = 2 });
+        var SecondReactionResponse = await _client.PostAsJsonAsync("/api/chat/reactions", new { messageId = body.Id, reaction = 2 });
+
+        Assert.Equal(HttpStatusCode.Conflict,SecondReactionResponse.StatusCode);
+
+    }
     // ─── SendMessage ─────────────────────────────────────────────────────────
 
     [Fact]
