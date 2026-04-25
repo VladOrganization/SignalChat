@@ -34,12 +34,12 @@ public class ChatController(ISender sender) : ControllerBase
 
     [Authorize]
     [HttpPost("reactions")]
-    public Task ReactionMessage([FromBody] ReactionMessageResponse request, CancellationToken ct)
+    public Task ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdStr, out var userId))
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new ReactionMessageCommand(request.MessageId, userId, request.Reactions), ct);
+        return sender.Send(new ReactionMessageCommand(request.MessageId, userId, request.Reaction), ct);
     }
 }

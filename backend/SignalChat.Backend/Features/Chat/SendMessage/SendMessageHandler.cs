@@ -36,8 +36,7 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
             message.Text,
             user.UserName,
             message.Time,
-            message.Images.Select(x=>x.ImageUrl).ToList(),
-            []
+            message.Images.Select(x=>x.ImageUrl).ToList()
             );
 
         await hubContext.Clients.All.SendAsync("ReceiveMessage", dto, cancellationToken);

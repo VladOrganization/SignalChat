@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SignalChat.Backend.Controllers;
 using SignalChat.Backend.Database;
 using SignalChat.Backend.Database.Entities;
+using SignalChat.Backend.Database.Entities.Enums;
 using SignalChat.Backend.Models;
 using SignalChat.Backend.Tests.Infrastructure;
 
@@ -138,12 +139,41 @@ public class ChatControllerTests(IntegrationTestFactory factory)
     }
     // ----ReactionMessage-----------------------------------------------------
     [Fact]
+    public async Task ReactionMessageCounter()
+    {
+        var firstToken = await RegisterAndGetTokenAsync("Alice");
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", firstToken);
+
+        var createMessageResponse = await _client.PostAsJsonAsync("/api/chat/messages", new { text = "Hello" });
+
+        var body = await createMessageResponse.Content.ReadFromJsonAsync<MessageDto>();
+        Assert.NotNull(body);
+        var firstReaction = ReactionEnum.Like;
+        var secondReaction = ReactionEnum.DisLike;
+        await SendReactionMessage("kirill",body.Id,firstReaction);
+        
+        await SendReactionMessage("danik",body.Id,firstReaction);
+        
+        await SendReactionMessage("pipaf",body.Id,secondReaction);
+        
+
+        
+        var getMessageResponse = await _client.GetFromJsonAsync<PagedResult<GetMessageResponse>>("/api/chat/messages");
+
+        Assert.NotNull(getMessageResponse);
+        Assert.Equal(2, getMessageResponse.Items[0].Reactions.Count);
+        Assert.Contains(new ReactionCount (ReactionEnum.Like,2), getMessageResponse.Items[0].Reactions);
+        Assert.Contains(new ReactionCount (ReactionEnum.DisLike,1), getMessageResponse.Items[0].Reactions);
+
+    }
+    [Fact]
     public async Task ReactionMessage_WithoutAuth_Returns401()
     {
         var res = await _client.PostAsJsonAsync("/api/chat/reactions",new {reactions=1});
         Assert.Equal(HttpStatusCode.Unauthorized,res.StatusCode);
     }
-
+    
     [Fact]
     public async Task ReactionMessage_Returns200()
     {
@@ -247,7 +277,16 @@ public class ChatControllerTests(IntegrationTestFactory factory)
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
+   
 
+    private async Task SendReactionMessage(string name,Guid messageId,ReactionEnum reaction) {
+        var token = await RegisterAndGetTokenAsync(name);
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+         await _client.PostAsJsonAsync("/api/chat/reactions", new { messageId = messageId, reaction = reaction });
+       
+    }
     private async Task<string> RegisterAndGetTokenAsync(string userName)
     {
         var response = await _client.PostAsJsonAsync("/api/auth/register",

@@ -2,17 +2,14 @@
 
 namespace SignalChat.Backend.Models
 {
-    public class ReactionCount
-    {
-        public ReactionEnum ReactionEnum { get; set; }
-        public int Count { get; set; }
-    }
+    public record ReactionCount(ReactionEnum ReactionEnum,int Count);
+    
     public record GetMessageResponse(
         Guid Id,
         string Text,
         string UserName, 
         DateTime Time,
         List<string> Images,
-        List<ReactionCount> ReactonCount
+        List<ReactionCount> Reactions
         );
 }

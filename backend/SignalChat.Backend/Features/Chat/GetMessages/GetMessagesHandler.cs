@@ -15,11 +15,11 @@ public class GetMessagesHandler(ChatDbContext db) : IRequestHandler<GetMessagesQ
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(m => new GetMessageResponse(m.Id, m.Text, m.User.UserName, m.Time,m.Images.Select(x=>x.ImageUrl).ToList(),
-            m.Reaction.GroupBy(x=>x.Emoji).Select(r=>new ReactionCount {ReactionEnum =  r.Key,Count = r.Count() }).ToList()
+            m.Reaction.GroupBy(x=>x.Emoji).Select(r=>new ReactionCount (r.Key,r.Count())).ToList()
             ))
             .ToListAsync(cancellationToken);
 
-        // [1, 2, 1, 2, 3, 1]
+        
 
         return new PagedResult<GetMessageResponse>(items, totalCount, request.Page, request.PageSize);
     }
