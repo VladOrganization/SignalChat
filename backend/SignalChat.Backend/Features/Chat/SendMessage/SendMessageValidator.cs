@@ -6,6 +6,6 @@ public class SendMessageValidator : AbstractValidator<SendMessageCommand>
 {
     public SendMessageValidator()
     {
-        RuleFor(x => x.Text).NotEmpty().MaximumLength(2000);
+        RuleFor(x => x.Text).MaximumLength(2000);
     }
 }
