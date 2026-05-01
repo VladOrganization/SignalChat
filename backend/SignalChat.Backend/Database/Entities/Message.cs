@@ -1,5 +1,8 @@
 namespace SignalChat.Backend.Database.Entities;
 
+
+
+
 public class Message
 {
     public Guid Id { get; set; }
@@ -9,4 +12,7 @@ public class Message
     public User User { get; set; }
     public DateTime Time { get; set; }
     public List<Image> Images { get; internal set; }
+
+    public List<Reaction> Reaction { get; internal set; }
+    
 }

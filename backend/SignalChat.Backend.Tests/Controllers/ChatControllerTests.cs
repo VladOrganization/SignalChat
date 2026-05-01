@@ -3,8 +3,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SignalChat.Backend.Controllers;
 using SignalChat.Backend.Database;
 using SignalChat.Backend.Database.Entities;
+using SignalChat.Backend.Database.Entities.Enums;
 using SignalChat.Backend.Models;
 using SignalChat.Backend.Tests.Infrastructure;
 
@@ -135,7 +137,76 @@ public class ChatControllerTests(IntegrationTestFactory factory)
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+    // ----ReactionMessage-----------------------------------------------------
+    [Fact]
+    public async Task ReactionMessageCounter()
+    {
+        var firstToken = await RegisterAndGetTokenAsync("Alice");
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", firstToken);
 
+        var createMessageResponse = await _client.PostAsJsonAsync("/api/chat/messages", new { text = "Hello" });
+
+        var body = await createMessageResponse.Content.ReadFromJsonAsync<MessageDto>();
+        Assert.NotNull(body);
+        var firstReaction = ReactionEnum.Like;
+        var secondReaction = ReactionEnum.DisLike;
+        await SendReactionMessage("kirill",body.Id,firstReaction);
+        
+        await SendReactionMessage("danik",body.Id,firstReaction);
+        
+        await SendReactionMessage("pipaf",body.Id,secondReaction);
+        
+
+        
+        var getMessageResponse = await _client.GetFromJsonAsync<PagedResult<GetMessageResponse>>("/api/chat/messages");
+
+        Assert.NotNull(getMessageResponse);
+        Assert.Equal(2, getMessageResponse.Items[0].Reactions.Count);
+        Assert.Contains(new ReactionCount (ReactionEnum.Like,2), getMessageResponse.Items[0].Reactions);
+        Assert.Contains(new ReactionCount (ReactionEnum.DisLike,1), getMessageResponse.Items[0].Reactions);
+
+    }
+    [Fact]
+    public async Task ReactionMessage_WithoutAuth_Returns401()
+    {
+        var res = await _client.PostAsJsonAsync("/api/chat/reactions",new {reactions=1});
+        Assert.Equal(HttpStatusCode.Unauthorized,res.StatusCode);
+    }
+    
+    [Fact]
+    public async Task ReactionMessage_Returns200()
+    {
+        var token = await RegisterAndGetTokenAsync("Alice");
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var messageResponse = await _client.PostAsJsonAsync("/api/chat/messages", new { text = "Hello" });
+
+        var body = await messageResponse.Content.ReadFromJsonAsync<MessageDto>();
+        Assert.Equal(HttpStatusCode.OK, messageResponse.StatusCode);
+       
+        var responce = await _client.PostAsJsonAsync("/api/chat/reactions", new { messageId = body.Id,reaction = 1 });
+
+
+    }
+    [Fact]
+    public async Task ReactionMessage_WithDoubleReaction_Returns409() {
+        var token = await RegisterAndGetTokenAsync("Alice");
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var messageResponse = await _client.PostAsJsonAsync("/api/chat/messages", new { text = "Hello" });
+
+        var body = await messageResponse.Content.ReadFromJsonAsync<MessageDto>();
+
+        
+        var FirstReactionResponse = await _client.PostAsJsonAsync("/api/chat/reactions", new { messageId = body.Id, reaction = 2 });
+        var SecondReactionResponse = await _client.PostAsJsonAsync("/api/chat/reactions", new { messageId = body.Id, reaction = 2 });
+
+        Assert.Equal(HttpStatusCode.Conflict,SecondReactionResponse.StatusCode);
+
+    }
     // ─── SendMessage ─────────────────────────────────────────────────────────
 
     [Fact]
@@ -206,7 +277,16 @@ public class ChatControllerTests(IntegrationTestFactory factory)
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
+   
 
+    private async Task SendReactionMessage(string name,Guid messageId,ReactionEnum reaction) {
+        var token = await RegisterAndGetTokenAsync(name);
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+         await _client.PostAsJsonAsync("/api/chat/reactions", new { messageId = messageId, reaction = reaction });
+       
+    }
     private async Task<string> RegisterAndGetTokenAsync(string userName)
     {
         var response = await _client.PostAsJsonAsync("/api/auth/register",
