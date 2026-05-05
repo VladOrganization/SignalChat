@@ -1,16 +1,19 @@
-using System.Text;
+using FluentAssertions.Common;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using SignalChat.Backend.Database;
+using SignalChat.Backend.Database.Entities;
 using SignalChat.Backend.Hubs;
 using SignalChat.Backend.Middleware;
 using SignalChat.Backend.Pipeline;
 using SignalChat.Backend.Services;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,8 +23,67 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-builder.Services.AddDbContext<ChatDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("ChatDb")));
+builder.Services.AddDbContext<ChatDbContext>(options => {
+    options.UseNpgsql(builder.Configuration.GetConnectionString("ChatDb"));
+    options.UseOpenIddict();
+});
+//
+builder.Services.AddOpenIddict()
+    // 1. Регистрируем ядро и указываем EF Core для хранения
+    .AddCore(options =>
+    {
+        options.UseEntityFrameworkCore()
+               .UseDbContext<ChatDbContext>();
+    })
+    // 2. Конфигурируем сервер OpenIddict
+    .AddServer(options =>
+    {
+        options.SetUserInfoEndpointUris("connect/userinfo");
+        options.UseAspNetCore().EnableUserInfoEndpointPassthrough();
+        // Устанавливаем endpoint'ы для получения токена и информации о пользователе
+        options.SetTokenEndpointUris("connect/token")
+               .SetUserInfoEndpointUris("connect/userinfo");
+
+        // Включаем необходимые OAuth 2.0 потоки
+        options.AllowPasswordFlow()           // логин/пароль
+               .AllowRefreshTokenFlow()       // обновление токенов
+               .AllowClientCredentialsFlow(); // для сервис-аккаунтов
+
+        // Регистрируем сертификаты для подписи и шифрования
+        // ВАЖНО: Для разработки используйте AddDevelopmentEncryptionCertificate(),
+        // для production замените на production сертификаты
+        options.AddDevelopmentEncryptionCertificate()
+               .AddDevelopmentSigningCertificate();
+
+        // Интеграция с ASP.NET Core
+        options.UseAspNetCore()
+               .EnableTokenEndpointPassthrough(); // Позволяет обрабатывать /connect/token вручную
+    });
+//
+
+builder.Services.AddOpenIddict()
+    .AddValidation(options =>
+    {
+        // Указываем URL нашего центрального auth-сервера
+        options.SetIssuer("https://localhost:5001/");
+        options.AddAudiences("my_api");
+        options.UseLocalServer(); // Валидация будет использовать тот же сервер, если API и AuthServer в одном проекте
+        options.UseAspNetCore();
+    });
+builder.Services.AddIdentity<User, IdentityRole>()
+    .AddEntityFrameworkStores<ChatDbContext>()
+    .AddDefaultTokenProviders();
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    // Отключаем все требования к паролю
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 1;          // Минимальная длина — 1 символ
+    options.Password.RequiredUniqueChars = 1;
+    options.User.AllowedUserNameCharacters = null;
+});
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
@@ -75,8 +137,8 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-app.UseCors(corsPolicyName);
-
+//app.UseCors(corsPolicyName);
+app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 app.UseStaticFiles();
 
 app.UseExceptionHandler();

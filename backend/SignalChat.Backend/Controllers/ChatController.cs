@@ -26,10 +26,10 @@ public class ChatController(ISender sender) : ControllerBase
     public Task<MessageDto> SendMessage([FromBody] SendMessageRequest request, CancellationToken ct)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(userIdStr, out var userId))
+        if (userIdStr is null)
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new SendMessageCommand(userId, request.Text,request.ImageUrl), ct);
+        return sender.Send(new SendMessageCommand(userIdStr, request.Text,request.ImageUrl), ct);
     }
 
     [Authorize]
@@ -37,9 +37,9 @@ public class ChatController(ISender sender) : ControllerBase
     public Task ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(userIdStr, out var userId))
+        if (userIdStr is null)
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new ReactionMessageCommand(request.MessageId, userId, request.Reaction), ct);
+        return sender.Send(new ReactionMessageCommand(request.MessageId,userIdStr, request.Reaction), ct);
     }
 }

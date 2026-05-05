@@ -4,6 +4,7 @@
     :class="[message.own ? 'own' : 'other', { 'has-images': imageCount > 0 }]"
   >
     <div class="message-content">
+
       <div class="message-text" v-if="message.text">{{ message.text }}</div>
 
       <div v-if="imageCount > 0" class="image-grid" :class="gridClass">
@@ -25,6 +26,7 @@ import { computed } from 'vue'
 const baseURL = import.meta.env.VITE_API_BASE_URL as string
 
 export interface Message {
+  
   /** Текст сообщения (обязательно) */
   text: string
   /** Время отправки, например '12:05' */
