@@ -70,6 +70,8 @@ builder.Services.AddOpenIddict()
         options.UseLocalServer(); // Валидация будет использовать тот же сервер, если API и AuthServer в одном проекте
         options.UseAspNetCore();
     });
+builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<ChatDbContext>()
     .AddDefaultTokenProviders();
@@ -147,9 +149,9 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
-
 app.Run();
 
 public partial class Program

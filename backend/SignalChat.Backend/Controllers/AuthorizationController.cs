@@ -9,8 +9,8 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace SignalChat.Backend.Controllers
 {
-    [Route("connect")]
     [ApiController]
+    [Route("connect")]
     public class AuthorizationController : ControllerBase
     {
         private readonly UserManager<User> _userManager;
