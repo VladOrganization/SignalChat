@@ -12,8 +12,8 @@ using SignalChat.Backend.Database;
 namespace SignalChat.Backend.Migrations
 {
     [DbContext(typeof(ChatDbContext))]
-    [Migration("20260501125724_createReactionsTable")]
-    partial class createReactionsTable
+    [Migration("20260507123113_fix")]
+    partial class fix
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
