@@ -58,6 +58,8 @@ namespace SignalChat.Backend.Controllers
 
             return Ok(new { message = "User registered successfully", userId = user.Id });
         }
+
+
         [HttpPost("login")]
         public async Task<IActionResult> LoginJson([FromBody] LoginRequest request)
         {
