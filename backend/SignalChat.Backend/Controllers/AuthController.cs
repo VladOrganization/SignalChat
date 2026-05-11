@@ -2,29 +2,29 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using OpenIddict.Abstractions;
 using OpenIddict.Server;
-using OpenIddict.Server.AspNetCore;
 using SignalChat.Backend.Database.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Authentication;
+using OpenIddict.Abstractions;
+using OpenIddict.Server.AspNetCore;
 
 namespace SignalChat.Backend.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly UserManager<User> _userManager;
+        private readonly IOptions<OpenIddictServerOptions> _options;
 
-        public AuthController(UserManager<User> userManager, SignInManager<User> signInManager, IServiceProvider serviceProvider)
+        public AuthController(UserManager<User> userManager, IOptions<OpenIddictServerOptions> options, SignInManager<User> signInManager)
         {
             _userManager = userManager;
+            _options = options;
             _signInManager = signInManager;
-            _serviceProvider = serviceProvider;
         }
 
         public class RegisterRequest
@@ -34,12 +34,9 @@ namespace SignalChat.Backend.Controllers
             public string Password { get; set; }
         }
 
-        [HttpPost("register-oid")]
+        [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            if (request == null)
-                return BadRequest("Invalid request.");
-
             var user = new User
             {
                 UserName = request.Username,
@@ -50,82 +47,86 @@ namespace SignalChat.Backend.Controllers
 
             if (!result.Succeeded)
             {
-                var errors = result.Errors.Select(e => e.Description);
-                return BadRequest(new { errors });
+                return BadRequest(result.Errors);
             }
-
-            
 
             return Ok(new { message = "User registered successfully", userId = user.Id });
         }
 
-
-        [HttpPost("login")]
-        public async Task<IActionResult> LoginJson([FromBody] LoginRequest request)
+        [HttpPost("/connect/token")]
+        public async Task<IActionResult> Exchange()
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.UsernameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest(new { error = "Username/email and password are required." });
-
-            // Поиск пользователя (логин или email)
-            var user = await _userManager.FindByNameAsync(request.UsernameOrEmail);
-            if (user == null && request.UsernameOrEmail.Contains('@'))
-                user = await _userManager.FindByEmailAsync(request.UsernameOrEmail);
-
-            if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
-                return Unauthorized(new { error = "Invalid credentials." });
-
-            // Генерация JWT access token
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = GetSigningKey(); // Получаем ключ подписи из конфигурации OpenIddict
-
-            var claims = new List<Claim>
+            var request = HttpContext.GetOpenIddictServerRequest();
+            
+            if (request.IsPasswordGrantType())
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? "")
-            };
+                var user = await _userManager.FindByEmailAsync(request.Username!);
 
-            var tokenDescriptor = new SecurityTokenDescriptor
+                if (user == null)
+                {
+                    return Forbid();
+                }
+
+                var result = await _signInManager.CheckPasswordSignInAsync(
+                    user,
+                    request.Password!,
+                    false);
+
+                if (!result.Succeeded)
+                {
+                    return Forbid();
+                }
+
+                var identity = new ClaimsIdentity(
+                    TokenValidationParameters.DefaultAuthenticationType);
+
+                identity.SetClaim(OpenIddictConstants.Claims.Subject, user.Id);
+                identity.SetClaim(OpenIddictConstants.Claims.Email, user.Email!);
+
+                identity.SetScopes(new[]
+                {
+                    OpenIddictConstants.Scopes.OfflineAccess
+                });
+
+                var principal = new ClaimsPrincipal(identity);
+
+                principal.SetScopes(new[]
+                {
+                    OpenIddictConstants.Scopes.OfflineAccess
+                });
+
+                return SignIn(
+                    principal,
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            if (request.IsRefreshTokenGrantType())
             {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddHours(1),
-                Issuer = "https://localhost:5001", // Ваш issuer
-                Audience = "SignalChat.Api",        // Audience вашего API
-                SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256)
-            };
+                var result = await HttpContext.AuthenticateAsync(
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
-            var accessToken = tokenHandler.CreateToken(tokenDescriptor);
-            var accessTokenString = tokenHandler.WriteToken(accessToken);
+                var userId = result.Principal!.GetClaim(
+                    OpenIddictConstants.Claims.Subject);
 
-            // Генерация refresh token (простой случай: случайная строка)
-            var refreshToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+                var user = await _userManager.FindByIdAsync(userId!);
 
-            // Сохраните refresh token где-нибудь (например, в таблице UserRefreshTokens)
-            // Для простоты возвращаем его, но в реальности нужно связать с пользователем
+                if (user == null)
+                {
+                    return Forbid();
+                }
 
-            return Ok(new
-            {
-                access_token = accessTokenString,
-                token_type = "Bearer",
-                expires_in = 3600,
-                refresh_token = refreshToken
-            });
-        }
-        public class LoginRequest
-        {
-            public string UsernameOrEmail { get; set; }
-            public string Password { get; set; }
-        }
-        private SecurityKey GetSigningKey()
-        {
-            // Вариант 1: из настроек OpenIddict (если вы используете development сертификат)
-            var options = _serviceProvider.GetRequiredService<IOptions<OpenIddictServerOptions>>();
-            var signingKey = options.Value.SigningCredentials.FirstOrDefault()?.Key;
-            if (signingKey != null) return signingKey;
+                var identity = new ClaimsIdentity(
+                    result.Principal.Claims,
+                    TokenValidationParameters.DefaultAuthenticationType);
 
-            // Вариант 2: вручную создать RSA ключ (только для разработки)
-            using var rsa = new RSACryptoServiceProvider(2048);
-            return new RsaSecurityKey(rsa.ExportParameters(true));
+                var principal = new ClaimsPrincipal(identity);
+
+                return SignIn(
+                    principal,
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            throw new NotImplementedException();
         }
     }
 }

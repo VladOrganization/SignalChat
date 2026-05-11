@@ -13,9 +13,6 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> dbContextOptions) : I
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(
-            typeof(ChatDbContext).Assembly
-        );
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChatDbContext).Assembly);
         modelBuilder.UseOpenIddict();
     }
