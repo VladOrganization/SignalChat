@@ -1,7 +1,9 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OpenIddict.Validation.AspNetCore;
 using Scalar.AspNetCore;
 using SignalChat.Backend.Database;
 using SignalChat.Backend.Database.Entities;
@@ -9,7 +11,6 @@ using SignalChat.Backend.Hubs;
 using SignalChat.Backend.Middleware;
 using SignalChat.Backend.Pipeline;
 using SignalChat.Backend.Services;
-using OpenIddict.Validation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +31,22 @@ builder.Services.AddDbContext<ChatDbContext>(options => {
     options.UseNpgsql(builder.Configuration.GetConnectionString("ChatDb"));
     options.UseOpenIddict();
 });
-
+builder.Services
+ .AddAuthentication(options =>
+ {
+     options.DefaultScheme =
+     CookieAuthenticationDefaults.AuthenticationScheme;
+ })
+ .AddCookie()
+ .AddGoogle(options =>
+ {
+     options.ClientId =
+     builder.Configuration["Authentication:Google:ClientId"]!;
+     options.ClientSecret =
+     builder.Configuration["Authentication:Google:ClientSecret"]!;
+     options.CallbackPath = "/signin-google";
+     options.SaveTokens = true;
+ });
 builder.Services.AddOpenIddict()
     // 1. Регистрируем ядро и указываем EF Core для хранения
     .AddCore(options =>
