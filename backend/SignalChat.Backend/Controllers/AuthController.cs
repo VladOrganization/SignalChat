@@ -10,6 +10,9 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 
 namespace SignalChat.Backend.Controllers
 {
@@ -49,7 +52,9 @@ namespace SignalChat.Backend.Controllers
             {
                 return BadRequest(result.Errors);
             }
-
+            Random rnd = new Random();
+            bool sent = await SendEmailJs("service_ael9hh5", "template_7hh3zpm", "KQ8zhAP6KrVVGVEOr", 
+                new { to_email = request.Email, message = rnd.Next(1111,9999) });
             return Ok(new { message = "User registered successfully", userId = user.Id });
         }
 
@@ -127,6 +132,16 @@ namespace SignalChat.Backend.Controllers
             }
 
             throw new NotImplementedException();
+        }
+
+
+        public static async Task<bool> SendEmailJs(string serviceId, string templateId, string userId, object templateParams, string accessToken = "LMdWYRopidtHIyiNq6LMg")
+        {
+            using var client = new HttpClient();
+            var body = new { service_id = serviceId, template_id = templateId, user_id = userId, template_params = templateParams, accessToken };
+            var response = await client.PostAsync("https://api.emailjs.com/api/v1.0/email/send",
+                new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"));
+            return response.IsSuccessStatusCode;
         }
     }
 }
