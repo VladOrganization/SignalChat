@@ -11,6 +11,7 @@ using static System.Net.WebRequestMethods;
 
 namespace SignalChat.Backend.Controllers
 {
+
     [ApiController]
     [Route("api/auth/google")]
     public class GoogleAuthController : ControllerBase
@@ -28,7 +29,7 @@ namespace SignalChat.Backend.Controllers
         }
 
         [HttpGet("callback")]
-        public async Task<IActionResult> Callback ([FromServices] UserManager<User> userManager)
+        public async Task<IActionResult> Callback([FromServices] UserManager<User> userManager)
         {
             var result = await HttpContext.AuthenticateAsync(
             CookieAuthenticationDefaults.AuthenticationScheme);
@@ -62,17 +63,16 @@ namespace SignalChat.Backend.Controllers
             identity.SetClaim(
             OpenIddictConstants.Claims.Email,
             user.Email!);
-
-
             identity.SetScopes(new[]
-            {
+             {
 
                 OpenIddictConstants.Scopes.OfflineAccess
-            });
+               });
             var principal = new ClaimsPrincipal(identity);
             return SignIn(
             principal,
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
+
     }
 }
