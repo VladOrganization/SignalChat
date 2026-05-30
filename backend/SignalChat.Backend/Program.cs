@@ -14,6 +14,14 @@ using SignalChat.Backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = "localhost:6379";
+    options.InstanceName = "SignalChatInstance";
+});
+
+
 builder.Logging.AddConsole();
 
 builder.Services.AddLogging(options =>
