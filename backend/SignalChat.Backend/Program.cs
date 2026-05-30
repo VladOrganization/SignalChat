@@ -1,6 +1,7 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
@@ -39,22 +40,33 @@ builder.Services.AddDbContext<ChatDbContext>(options => {
     options.UseNpgsql(builder.Configuration.GetConnectionString("ChatDb"));
     options.UseOpenIddict();
 });
+
+builder.Services.AddIdentity<User, IdentityRole>()
+    .AddEntityFrameworkStores<ChatDbContext>()
+    .AddDefaultTokenProviders();
+
 builder.Services
- .AddAuthentication(options =>
- {
-     options.DefaultScheme =
-     CookieAuthenticationDefaults.AuthenticationScheme;
- })
- .AddCookie()
- .AddGoogle(options =>
- {
-     options.ClientId =
-     builder.Configuration["Authentication:Google:ClientId"]!;
-     options.ClientSecret =
-     builder.Configuration["Authentication:Google:ClientSecret"]!;
-     options.CallbackPath = "/signin-google";
-     options.SaveTokens = true;
- });
+    .AddAuthentication(options =>
+    {
+        options.DefaultScheme =
+            IdentityConstants.ApplicationScheme;
+    })
+    .AddGoogle(options =>
+    {
+        options.ClientId =
+            builder.Configuration["Authentication:Google:ClientId"]!;
+
+        options.ClientSecret =
+            builder.Configuration["Authentication:Google:ClientSecret"]!;
+
+        options.CallbackPath = "/signin-google";
+
+        options.SignInScheme =
+            IdentityConstants.ExternalScheme;
+
+        options.SaveTokens = true;
+    });
+
 builder.Services.AddOpenIddict()
     // 1. Регистрируем ядро и указываем EF Core для хранения
     .AddCore(options =>
@@ -100,10 +112,6 @@ builder.Services.AddOpenIddict()
 //builder.Services.AddHttpClient();
 //builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddIdentity<User, IdentityRole>()
-    .AddEntityFrameworkStores<ChatDbContext>()
-    .AddDefaultTokenProviders();
-
 builder.Services.Configure<IdentityOptions>(options =>
 {
     // Отключаем все требования к паролю
@@ -125,10 +133,6 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSignalR();
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-});
 builder.Services.AddAuthorization();
 
 string corsPolicyName = "CorsOptions";

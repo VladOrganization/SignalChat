@@ -32,10 +32,15 @@ namespace SignalChat.Backend.Controllers
         public async Task<IActionResult> Callback([FromServices] UserManager<User> userManager)
         {
             var result = await HttpContext.AuthenticateAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme);
+                IdentityConstants.ExternalScheme);
             if (!result.Succeeded)
             {
-                return BadRequest();
+                return BadRequest(new
+                {
+                    result.None,
+                    result.Succeeded,
+                    Failure = result.Failure?.Message
+                });
             }
             var email = result.Principal?
              .FindFirst(ClaimTypes.Email)?
@@ -56,7 +61,7 @@ namespace SignalChat.Backend.Controllers
                 await userManager.CreateAsync(user);
             }
             var identity = new ClaimsIdentity(
-            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                IdentityConstants.ApplicationScheme);
             identity.SetClaim(
             OpenIddictConstants.Claims.Subject,
             user.Id);
@@ -71,7 +76,7 @@ namespace SignalChat.Backend.Controllers
             var principal = new ClaimsPrincipal(identity);
             return SignIn(
             principal,
-            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            IdentityConstants.ApplicationScheme);
         }
 
     }
