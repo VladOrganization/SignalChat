@@ -1,14 +1,16 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using OpenIddict.Server;
-using SignalChat.Backend.Database.Entities;
-using System.Security.Claims;
+﻿using FluentAssertions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
+using OpenIddict.Server;
 using OpenIddict.Server.AspNetCore;
+using SignalChat.Backend.Database.Entities;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 
@@ -19,12 +21,13 @@ namespace SignalChat.Backend.Controllers
     {
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
-        private readonly IOptions<OpenIddictServerOptions> _options;
+        
+        private readonly IDistributedCache _cache;
 
-        public AuthController(UserManager<User> userManager, IOptions<OpenIddictServerOptions> options, SignInManager<User> signInManager)
+        public AuthController(UserManager<User> userManager, IDistributedCache cache, SignInManager<User> signInManager)
         {
             _userManager = userManager;
-            _options = options;
+            _cache = cache;
             _signInManager = signInManager;
         }
 
@@ -33,6 +36,19 @@ namespace SignalChat.Backend.Controllers
             public string Username { get; set; }
             public string Email { get; set; }
             public string Password { get; set; }
+        }
+
+        public record AproveCodeRequest(string id,string code);
+        [HttpPost("aprove-code")]
+        public async Task<IActionResult> AproveCode([FromBody] AproveCodeRequest request) {
+            var code = await _cache.GetStringAsync(request.id);
+
+            if (code == request.code)
+            {
+                return Ok();
+            }
+
+            return BadRequest("code is not aprove");
         }
 
         [HttpPost("register")]
@@ -45,14 +61,16 @@ namespace SignalChat.Backend.Controllers
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
-
+            
             if (!result.Succeeded)
             {
                 return BadRequest(result.Errors);
             }
             Random rnd = new Random();
+            var emailCode = rnd.Next(1111,9999);
             bool sent = await SendEmailJs("service_ael9hh5", "template_7hh3zpm", "KQ8zhAP6KrVVGVEOr", 
-                new { to_email = request.Email, message = rnd.Next(1111,9999) });
+                new { to_email = request.Email, message = emailCode });
+            await _cache.SetStringAsync(user.Id.ToString(), emailCode.ToString());
             return Ok(new { message = "User registered successfully", userId = user.Id });
         }
 

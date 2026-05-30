@@ -15,11 +15,19 @@ using SignalChat.Backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var redisConn = builder.Configuration.GetValue<string>("Redis:ConnectionString");
 
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = "localhost:6379";
-    options.InstanceName = "SignalChatInstance";
+    options.Configuration = redisConn;
+    options.InstanceName = "Session_";
+});
+
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
 });
 
 
