@@ -49,7 +49,12 @@ builder.Services.AddDbContext<ChatDbContext>(options => {
     options.UseOpenIddict();
 });
 
-builder.Services.AddIdentity<User, IdentityRole>()
+builder.Services.AddIdentity<User, IdentityRole>(options =>
+    {
+        options.SignIn.RequireConfirmedEmail = true;
+        options.SignIn.RequireConfirmedAccount = true; 
+
+    })
     .AddEntityFrameworkStores<ChatDbContext>()
     .AddDefaultTokenProviders();
 

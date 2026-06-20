@@ -1,13 +1,11 @@
-﻿using FluentAssertions;
+﻿
+using System.Net;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
-using OpenIddict.Server;
 using OpenIddict.Server.AspNetCore;
 using SignalChat.Backend.Database.Entities;
 using System.Security.Claims;
@@ -22,12 +20,12 @@ namespace SignalChat.Backend.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
         
-        private readonly IDistributedCache _cache;
+       
 
-        public AuthController(UserManager<User> userManager, IDistributedCache cache, SignInManager<User> signInManager)
+        public AuthController(UserManager<User> userManager, SignInManager<User> signInManager)
         {
             _userManager = userManager;
-            _cache = cache;
+            
             _signInManager = signInManager;
         }
 
@@ -38,19 +36,31 @@ namespace SignalChat.Backend.Controllers
             public string Password { get; set; }
         }
 
-        public record AproveCodeRequest(string id,string code);
-        [HttpPost("aprove-code")]
-        public async Task<IActionResult> AproveCode([FromBody] AproveCodeRequest request) {
-            var code = await _cache.GetStringAsync(request.id);
-
-            if (code == request.code)
+        [HttpGet("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail(string userId, string code)
+        {
+            if (userId == null || code == null)
             {
-                return Ok();
+                return BadRequest("Некорректные параметры запроса.");
             }
 
-            return BadRequest("code is not aprove");
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("Пользователь не найден.");
+            }
+
+            // Проверяем токен средствами Identity
+            var result = await _userManager.ConfirmEmailAsync(user, code);
+            if (result.Succeeded)
+            {
+                return Ok("Email успешно подтвержден! Теперь вы можете войти.");
+            }
+    
+            return BadRequest("Не удалось подтвердить Email (возможно, токен устарел).");
         }
 
+        
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
@@ -59,35 +69,45 @@ namespace SignalChat.Backend.Controllers
                 UserName = request.Username,
                 Email = request.Email
             };
-
             var result = await _userManager.CreateAsync(user, request.Password);
             
             if (!result.Succeeded)
             {
                 return BadRequest(result.Errors);
             }
-            Random rnd = new Random();
-            var emailCode = rnd.Next(1111,9999);
+            
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            
+            var baseUrl = "https://localhost:7093"; // или взять из конфигурации
+            var callbackUrl = $"{baseUrl}/confirm-email?userId={user.Id}&code={WebUtility.UrlEncode(token)}";
+
+          
             bool sent = await SendEmailJs("service_ael9hh5", "template_7hh3zpm", "KQ8zhAP6KrVVGVEOr", 
-                new { to_email = request.Email, message = emailCode });
-            await _cache.SetStringAsync(user.Id.ToString(), emailCode.ToString());
+                new { to_email = request.Email, message = "Подтвердите вашу почту\n"+
+                    $"Пожалуйста, подтвердите регистрацию, перейдя по <a href='{callbackUrl}'>ссылке</a>." });
+            
             return Ok(new { message = "User registered successfully", userId = user.Id });
         }
-
+        
         [HttpPost("/connect/token")]
         public async Task<IActionResult> Exchange()
         {
             var request = HttpContext.GetOpenIddictServerRequest();
             
+            
+            
             if (request.IsPasswordGrantType())
             {
                 var user = await _userManager.FindByEmailAsync(request.Username!);
-
+                
                 if (user == null)
                 {
                     return Forbid();
                 }
-
+                
+                if (!await _userManager.IsEmailConfirmedAsync(user))
+                    return BadRequest("Please confirm your email address before logging in.");
+                
                 var result = await _signInManager.CheckPasswordSignInAsync(
                     user,
                     request.Password!,
