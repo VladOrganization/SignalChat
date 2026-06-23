@@ -11,6 +11,7 @@ using SignalChat.Backend.Database.Entities;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace SignalChat.Backend.Controllers
 {
@@ -19,13 +20,20 @@ namespace SignalChat.Backend.Controllers
     {
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
+        private readonly IMemoryCache _cache;
         
-       
+        public class PendingRegistration
+        {
+            public string Email { get; set; }
+            public string Username { get; set; }
+            public string Password { get; set; } 
+            public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        }
 
-        public AuthController(UserManager<User> userManager, SignInManager<User> signInManager)
+        public AuthController(UserManager<User> userManager,IMemoryCache cache, SignInManager<User> signInManager)
         {
             _userManager = userManager;
-            
+            _cache = cache;
             _signInManager = signInManager;
         }
 
@@ -37,56 +45,69 @@ namespace SignalChat.Backend.Controllers
         }
 
         [HttpGet("confirm-email")]
-        public async Task<IActionResult> ConfirmEmail(string userId, string code)
+        public async Task<IActionResult> ConfirmEmail(string code)
         {
-            if (userId == null || code == null)
-            {
-                return BadRequest("Некорректные параметры запроса.");
-            }
+            if (string.IsNullOrEmpty(code))
+                return BadRequest("Код подтверждения не указан.");
 
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return NotFound("Пользователь не найден.");
-            }
+            
+            if (!_cache.TryGetValue(code, out PendingRegistration pending))
+                return BadRequest("Неверный или истёкший код подтверждения.");
 
-            // Проверяем токен средствами Identity
-            var result = await _userManager.ConfirmEmailAsync(user, code);
-            if (result.Succeeded)
+           
+            var user = new User
             {
-                return Ok("Email успешно подтвержден! Теперь вы можете войти.");
-            }
-    
-            return BadRequest("Не удалось подтвердить Email (возможно, токен устарел).");
+                UserName = pending.Username,
+                Email = pending.Email
+            };
+
+            var result = await _userManager.CreateAsync(user, pending.Password);
+            if (!result.Succeeded)
+                return BadRequest($"Ошибка создания пользователя: {string.Join(", ", result.Errors)}");
+
+            
+            user.EmailConfirmed = true;
+            await _userManager.UpdateAsync(user);
+
+            
+            _cache.Remove(code);
+
+            return Ok("Email подтверждён, пользователь успешно зарегистрирован!");
         }
 
         
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            var user = new User
-            {
-                UserName = request.Username,
-                Email = request.Email
-            };
-            var result = await _userManager.CreateAsync(user, request.Password);
             
-            if (!result.Succeeded)
-            {
-                return BadRequest(result.Errors);
-            }
-            
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            
-            var baseUrl = "https://localhost:7093"; // или взять из конфигурации
-            var callbackUrl = $"{baseUrl}/confirm-email?userId={user.Id}&code={WebUtility.UrlEncode(token)}";
+            var confirmationCode = Guid.NewGuid().ToString();
 
-          
-            bool sent = await SendEmailJs("service_ael9hh5", "template_7hh3zpm", "KQ8zhAP6KrVVGVEOr", 
-                new { to_email = request.Email, message = "Подтвердите вашу почту\n"+
-                    $"Пожалуйста, подтвердите регистрацию, перейдя по <a href='{callbackUrl}'>ссылке</a>." });
             
-            return Ok(new { message = "User registered successfully", userId = user.Id });
+            var pending = new PendingRegistration
+            {
+                Email = request.Email,
+                Username = request.Username,
+                Password = request.Password 
+            };
+            _cache.Set(confirmationCode, pending, TimeSpan.FromHours(24));
+
+           
+            var baseUrl = "https://localhost:7093"; 
+            var callbackUrl = $"{baseUrl}/confirm-email?code={WebUtility.UrlEncode(confirmationCode)}";
+
+           
+            bool sent = await SendEmailJs(
+                "service_ael9hh5",
+                "template_7hh3zpm",
+                "KQ8zhAP6KrVVGVEOr",
+                new
+                {
+                    to_email = request.Email,
+                    message = "Подтвердите вашу почту\n" +
+                              $"Пожалуйста, подтвердите регистрацию, перейдя по <a href='{callbackUrl}'>ссылке</a>."
+                });
+
+            return Ok(new { message = "Письмо отправлено. Подтвердите email для завершения регистрации." });
         }
         
         [HttpPost("/connect/token")]
