@@ -3,9 +3,6 @@
     <header class="chat-header">
       <div class="user-info">
         <span class="username">{{ auth.userName }}</span>
-        <button class="code-btn" @click="showCode = !showCode">
-          #{{ showCode ? auth.code + ' 👆🙈' : '****** 👆👀' }}
-        </button>
       </div>
       <button class="logout-btn" @click="logout">Выйти</button>
     </header>
@@ -100,7 +97,6 @@ const emit = defineEmits<{ (e: 'logout'): void }>()
 
 const auth = useAuthStore()
 const chat = useChatStore()
-const showCode = ref(false)
 const textModel = ref('')
 const sending = ref(false)
 const loading = ref(true)
