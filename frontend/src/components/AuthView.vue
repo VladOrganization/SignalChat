@@ -202,8 +202,9 @@ async function login() {
     )
 
     // 3. Извлекаем токены
-    let accessToken:string = response.data.access_token
+    let accessToken = response.data.access_token
     let refreshToken:string = response.data.refresh_token
+
     authStore.setAuth({accessToken,refreshToken});
     // 5. Устанавливаем заголовок Authorization для всех последующих запросов (глобально)
     axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
