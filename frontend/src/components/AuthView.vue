@@ -49,8 +49,8 @@
             <p class="hint">Введите данные для входа</p>
             <input
               v-model="loginData.email"
-              type="text"
-              placeholder="userName"
+              type="email"
+              placeholder="Email"
               autofocus
               :disabled="loading"
             />
@@ -79,8 +79,9 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
 const authStore = useAuthStore()
-
+const router = useRouter();
 // Если используете Pinia / Vuex — раскомментируйте и настройте
 // import { useAuthStore } from '@/stores/auth'
 
@@ -186,10 +187,10 @@ async function login() {
     params.append('password', password.trim())
   
     const response = await axios.post<{
-      accessToken: string
-      refreshToken: string
-      expiresIn: number
-      tokenType: string
+      access_token: string
+      refresh_token: string
+      expires_in: number
+      token_type: string
     }>(
       `${API_BASE_URL}/connect/token`,
       params,
@@ -201,23 +202,14 @@ async function login() {
     )
 
     // 3. Извлекаем токены
-    const { 
-      accessToken,
-       refreshToken,
-       } = response.data
-
-   
-   
+    let accessToken:string = response.data.access_token
+    let refreshToken:string = response.data.refresh_token
     authStore.setAuth({accessToken,refreshToken});
-
-    
-
     // 5. Устанавливаем заголовок Authorization для всех последующих запросов (глобально)
     axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
-
     // 6. Сигнализируем родителю об успешном входе
     emit('authenticated')
-
+    
     // 7. Очищаем форму
     loginData.value = { email: '', password: '' }
   } catch (e: unknown) {

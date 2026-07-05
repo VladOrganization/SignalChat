@@ -79,7 +79,13 @@ namespace SignalChat.Backend.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            
+            var existingUser = await _userManager.FindByEmailAsync(request.Email);
+            if (existingUser != null)
+            {
+                // Возвращаем ошибку с понятным сообщением
+                return BadRequest(new { error = "Пользователь с таким email уже зарегистрирован." });
+            }
+
             var confirmationCode = Guid.NewGuid().ToString();
 
             

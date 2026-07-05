@@ -7,7 +7,6 @@
 import { useAuthStore } from '@/stores/auth'
 import AuthView from '@/components/AuthView.vue'
 import ChatView from '@/components/ChatView.vue'
-
 const auth = useAuthStore()
 
 function onAuthenticated() {}
