@@ -79,9 +79,7 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth';
-import { useRouter } from 'vue-router';
 const authStore = useAuthStore()
-const router = useRouter();
 // Если используете Pinia / Vuex — раскомментируйте и настройте
 // import { useAuthStore } from '@/stores/auth'
 
@@ -202,8 +200,8 @@ async function login() {
     )
 
     // 3. Извлекаем токены
-    let accessToken = response.data.access_token
-    let refreshToken:string = response.data.refresh_token
+    const accessToken = response.data.access_token
+    const refreshToken:string = response.data.refresh_token
 
     authStore.setAuth({accessToken,refreshToken});
     // 5. Устанавливаем заголовок Authorization для всех последующих запросов (глобально)
