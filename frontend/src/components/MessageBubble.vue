@@ -8,7 +8,7 @@
 
       <div v-if="imageCount > 0" class="image-grid" :class="gridClass">
         <div v-for="(img, i) in message.images" :key="i" class="grid-item" :class="itemClass()">
-          <img :src="`${baseURL}/${img}`" loading="lazy" alt="" />
+          <img :src="`/${img}`" loading="lazy" alt="" />
         </div>
       </div>
 
@@ -21,8 +21,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-const baseURL = import.meta.env.VITE_API_BASE_URL as string
 
 export interface Message {
   /** Текст сообщения (обязательно) */
