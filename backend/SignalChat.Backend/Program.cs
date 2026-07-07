@@ -63,6 +63,8 @@ builder.Services
     {
         options.DefaultScheme =
             IdentityConstants.ApplicationScheme;
+        options.DefaultAuthenticateScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
     })
     .AddGoogle(options =>
     {
@@ -175,17 +177,16 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-//app.UseCors(corsPolicyName);
-app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+app.UseCors(corsPolicyName);
 app.UseStaticFiles();
 
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
-
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
+
 app.Run();

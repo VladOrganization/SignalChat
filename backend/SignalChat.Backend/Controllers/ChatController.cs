@@ -2,7 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SignalChat.Backend.Database.Entities.Enums;
+using OpenIddict.Abstractions;
 using SignalChat.Backend.Exceptions;
 using SignalChat.Backend.Features.Chat.GetMessages;
 using SignalChat.Backend.Features.Chat.ReactionMessage;
@@ -25,7 +25,7 @@ public class ChatController(ISender sender) : ControllerBase
     [HttpPost("messages")]
     public Task<MessageDto> SendMessage([FromBody] SendMessageRequest request, CancellationToken ct)
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userIdStr = User.FindFirstValue(OpenIddictConstants.Claims.Subject);
         if (userIdStr is null)
             throw new UnauthorizedException("Пользователь не авторизован");
         
@@ -36,7 +36,7 @@ public class ChatController(ISender sender) : ControllerBase
     [HttpPost("reactions")]
     public Task ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userIdStr = User.FindFirstValue(OpenIddictConstants.Claims.Subject);
         if (userIdStr is null)
             throw new UnauthorizedException("Пользователь не авторизован");
         
