@@ -33,13 +33,18 @@ function toggleDropdown() {
   isOpen.value = !isOpen.value
 }
 
-async function selectOption(option:Number) {
+interface ReactionOption {
+  id: number
+  text: string
+  value: string
+}
+
+async function selectOption(option: ReactionOption) {
   selectedValue.value = option.value
   isOpen.value = false
 }
 
-
-const options = [
+const options: ReactionOption[] = [
   {id:1, text: '👍', value: '👍' },
   {id:2, text: '❤️', value: '❤️' },
   {id:3, text: '🤡', value: '🤡' },
