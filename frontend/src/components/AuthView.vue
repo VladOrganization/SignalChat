@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth';
 const authStore = useAuthStore()
@@ -88,82 +88,12 @@ const emit = defineEmits<{ (e: 'authenticated'): void }>()
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7093'
 
-// Вспомогательная функция для входа после синхронизации через localStorage
-const completeGoogleLogin = (accessToken: string, refreshToken: string) => {
-  authStore.setAuth({ accessToken, refreshToken })
-  axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
-  emit('authenticated')
+async function loginWithGoogle() {
+  const googleAuthUrl = `${API_BASE_URL}/api/auth/google/login`;
+  window.location.href = googleAuthUrl;
 }
 
-const loginWithGoogle = () => {
-  const width = 500;
-  const height = 600;
-  const left = window.screen.width / 2 - width / 2;
-  const top = window.screen.height / 2 - height / 2;
-  
-  const redirectUri = encodeURIComponent(window.location.origin);
-  const popup = window.open(
-    `${API_BASE_URL}/api/auth/google/login?redirect_uri=${redirectUri}`,
-    'Google Login',
-    `width=${width},height=${height},top=${top},left=${left}`
-  );
 
-  // Очищаем старый флаг успеха перед началом нового входа
-  localStorage.removeItem('google-login-success')
-
-  if (popup) {
-    const timer = setInterval(() => {
-      // 1. Проверяем, закрыл ли пользователь окно вручную
-      if (popup.closed) {
-        clearInterval(timer)
-        return
-      }
-
-      // 2. Периодически опрашиваем localStorage в качестве фолбека (COOP/CORS safe)
-      const successFlag = localStorage.getItem('google-login-success')
-      if (successFlag) {
-        const authDataStr = localStorage.getItem('auth')
-        if (authDataStr) {
-          try {
-            const authData = JSON.parse(authDataStr)
-            if (authData.accessToken) {
-              completeGoogleLogin(authData.accessToken, authData.refreshToken || '')
-              clearInterval(timer)
-              popup.close()
-            }
-          } catch (e) {
-            // Ошибка парсинга, ждем следующей итерации
-          }
-        }
-      }
-    }, 500)
-  }
-};
-
-// Слушатель событий изменения localStorage для мгновенной реакции
-const handleStorage = (event: StorageEvent) => {
-  if (event.key === 'google-login-success') {
-    const authDataStr = localStorage.getItem('auth')
-    if (authDataStr) {
-      try {
-        const authData = JSON.parse(authDataStr)
-        if (authData.accessToken) {
-          completeGoogleLogin(authData.accessToken, authData.refreshToken || '')
-        }
-      } catch (e) {
-        // Ошибка парсинга
-      }
-    }
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('storage', handleStorage)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('storage', handleStorage)
-})
 
 // ========== Реактивные данные ==========
 const isLogin = ref(false)

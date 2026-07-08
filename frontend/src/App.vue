@@ -4,30 +4,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import AuthView from '@/components/AuthView.vue'
 import ChatView from '@/components/ChatView.vue'
 
 const auth = useAuthStore()
 
-onMounted(() => {
-  // Проверяем, не открыто ли это окно как всплывающее после Google Login
-  const searchParams = new URLSearchParams(window.location.search)
-  const accessToken = searchParams.get('access_token')
-  if (accessToken) {
-    const refreshToken = searchParams.get('refresh_token') || ''
+//смотрю есть ли токен в адресной строке, если есть, то сохраняю его в хранилище и убираю из адресной строки
+const params = new URLSearchParams(window.location.search)
+const accessToken = params.get('access_token')
+
+if (accessToken) {
+  auth.setAuth({ accessToken, refreshToken: '' })
+  window.history.replaceState({}, '', '/') // Стирает токены из адресной строки
+}
     
-    // Сохраняем токен (автоматически запишется в localStorage через Pinia Persist)
-    auth.setAuth({ accessToken, refreshToken })
-    
-    // Триггерим событие storage для родительского окна
-    localStorage.setItem('google-login-success', Date.now().toString())
-    
-    // Закрываем всплывающее окно
-    window.close()
-  }
-})
 
 function onAuthenticated() {}
 function onLogout() {}
