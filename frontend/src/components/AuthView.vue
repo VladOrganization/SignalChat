@@ -69,6 +69,9 @@
             <span>Нет аккаунта?</span>
             <button type="button" @click="toggleMode">Зарегистрироваться</button>
           </div>
+          <button type="button" class="google-btn" @click="loginWithGoogle">
+            <i class="fab fa-google"></i> Войти через Google
+          </button>
         </div>
       </div>
     </div>
@@ -76,18 +79,91 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth';
 const authStore = useAuthStore()
-// Если используете Pinia / Vuex — раскомментируйте и настройте
-// import { useAuthStore } from '@/stores/auth'
 
 const emit = defineEmits<{ (e: 'authenticated'): void }>()
 
-// ========== Конфигурация из переменных окружения ==========
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7093'
-// const OAUTH_CLIENT_SECRET = import.meta.env.VITE_OAUTH_CLIENT_SECRET || '' // если требуется
+
+// Вспомогательная функция для входа после синхронизации через localStorage
+const completeGoogleLogin = (accessToken: string, refreshToken: string) => {
+  authStore.setAuth({ accessToken, refreshToken })
+  axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
+  emit('authenticated')
+}
+
+const loginWithGoogle = () => {
+  const width = 500;
+  const height = 600;
+  const left = window.screen.width / 2 - width / 2;
+  const top = window.screen.height / 2 - height / 2;
+  
+  const redirectUri = encodeURIComponent(window.location.origin);
+  const popup = window.open(
+    `${API_BASE_URL}/api/auth/google/login?redirect_uri=${redirectUri}`,
+    'Google Login',
+    `width=${width},height=${height},top=${top},left=${left}`
+  );
+
+  // Очищаем старый флаг успеха перед началом нового входа
+  localStorage.removeItem('google-login-success')
+
+  if (popup) {
+    const timer = setInterval(() => {
+      // 1. Проверяем, закрыл ли пользователь окно вручную
+      if (popup.closed) {
+        clearInterval(timer)
+        return
+      }
+
+      // 2. Периодически опрашиваем localStorage в качестве фолбека (COOP/CORS safe)
+      const successFlag = localStorage.getItem('google-login-success')
+      if (successFlag) {
+        const authDataStr = localStorage.getItem('auth')
+        if (authDataStr) {
+          try {
+            const authData = JSON.parse(authDataStr)
+            if (authData.accessToken) {
+              completeGoogleLogin(authData.accessToken, authData.refreshToken || '')
+              clearInterval(timer)
+              popup.close()
+            }
+          } catch (e) {
+            // Ошибка парсинга, ждем следующей итерации
+          }
+        }
+      }
+    }, 500)
+  }
+};
+
+// Слушатель событий изменения localStorage для мгновенной реакции
+const handleStorage = (event: StorageEvent) => {
+  if (event.key === 'google-login-success') {
+    const authDataStr = localStorage.getItem('auth')
+    if (authDataStr) {
+      try {
+        const authData = JSON.parse(authDataStr)
+        if (authData.accessToken) {
+          completeGoogleLogin(authData.accessToken, authData.refreshToken || '')
+        }
+      } catch (e) {
+        // Ошибка парсинга
+      }
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('storage', handleStorage)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('storage', handleStorage)
+})
 
 // ========== Реактивные данные ==========
 const isLogin = ref(false)
@@ -386,5 +462,34 @@ small {
 
 .toggle-link button:hover {
   color: #7c73ff;
+}
+
+.google-btn {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  color: #1a1a2e;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.google-btn:hover {
+  background: #f1f1f1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+}
+
+.google-btn i {
+  color: #db4437;
+  font-size: 1.1rem;
 }
 </style>

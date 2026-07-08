@@ -1,4 +1,4 @@
-﻿
+
 using System.Net;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -162,32 +162,6 @@ namespace SignalChat.Backend.Controllers
                 {
                     OpenIddictConstants.Scopes.OfflineAccess
                 });
-
-                return SignIn(
-                    principal,
-                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            }
-
-            if (request.IsRefreshTokenGrantType())
-            {
-                var result = await HttpContext.AuthenticateAsync(
-                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
-                var userId = result.Principal!.GetClaim(
-                    OpenIddictConstants.Claims.Subject);
-
-                var user = await _userManager.FindByIdAsync(userId!);
-
-                if (user == null)
-                {
-                    return Forbid();
-                }
-
-                var identity = new ClaimsIdentity(
-                    result.Principal.Claims,
-                    TokenValidationParameters.DefaultAuthenticationType);
-
-                var principal = new ClaimsPrincipal(identity);
 
                 return SignIn(
                     principal,
