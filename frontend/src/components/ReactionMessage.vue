@@ -9,7 +9,7 @@
         v-for="option in options"
         :key="option"
         class="dropdown-item"
-        @click="selectOption(options[option.id - 1])"
+        @click="selectOption(option)"
       >
         {{ option.text }}
       </div>
@@ -26,7 +26,6 @@ import axios from 'axios'
 import {useAuthStore} from '@/stores/auth'
 const auth = useAuthStore()
 const isOpen = ref(false)
-const selectedValue = ref()
 const reactionProps = defineProps({
   messageId: {
     type: String,
@@ -39,10 +38,7 @@ function toggleDropdown() {
 }
 
 async function selectOption(option:Number) {
-  selectedValue.value = option.value
   isOpen.value = false
-  console.log(auth.accessToken);
-  console.log('Selected option:', option, 'for message ID:', reactionProps.messageId)
   await axios.post('https://localhost:7093/api/chat/reactions', 
   {
     messageId: reactionProps.messageId,
