@@ -6,7 +6,6 @@
     <div class="message-content">
 
       <div class="message-text" v-if="message.text">{{ message.text }}</div>
-
       <div v-if="imageCount > 0" class="image-grid" :class="gridClass">
         <div v-for="(img, i) in message.images" :key="i" class="grid-item" :class="itemClass()">
           <img :src="`${baseURL}/${img}`" loading="lazy" alt="" />
@@ -14,19 +13,20 @@
       </div>
 
       <div class="message-meta">
-        <span>{{ message.time }}</span>
+        <span>{{ message.time }}</span> <ReactionMessage :messageId="message.id" />
       </div>
+     
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
+import ReactionMessage from '@/components/ReactionMessage.vue'
 const baseURL = import.meta.env.VITE_API_BASE_URL as string
 
 export interface Message {
-  
+  id: string
   /** Текст сообщения (обязательно) */
   text: string
   /** Время отправки, например '12:05' */

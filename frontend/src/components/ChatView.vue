@@ -18,12 +18,14 @@
           v-for="msg in chat.messages"
           :key="msg.id"
           :message="{
+            id: msg.id,
             text: msg.text,
             time: formatTime(msg.time),
             own: msg.userName === auth.userName,
             images: msg.images,
           }"
-        />
+        >
+        </MessageBubble>
       </template>
     </main>
 
@@ -54,6 +56,7 @@ import { startSignalR, stopSignalR } from '@/services/signalr'
 import ImageUploadButton from '@/components/ImageUploadButton.vue'
 import ImagePreviewGrid from '@/components/ImagePreviewGrid.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
+import ReactionMessage from '@/components/ReactionMessage.vue'
 
 const images = ref<ImageFile[]>([])
 let idCounter = 0
