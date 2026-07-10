@@ -16,7 +16,7 @@
     </div>
 
     <!-- Отображение выбранного значения -->
-    <p v-if="selectedValue" class="selected-text">{{ selectedValue }}</p>
+    <!--<p v-if="selectedValue" class="selected-text">{{ selectedValue }}</p>-->
   </div>
 </template>
 
