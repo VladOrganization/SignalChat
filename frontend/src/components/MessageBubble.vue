@@ -4,7 +4,6 @@
     :class="[message.own ? 'own' : 'other', { 'has-images': imageCount > 0 }]"
   >
     <div class="message-content">
-
       <div class="message-text" v-if="message.text">{{ message.text }}</div>
       <div v-if="imageCount > 0" class="image-grid" :class="gridClass">
         <div v-for="(img, i) in message.images" :key="i" class="grid-item" :class="itemClass()">
@@ -12,10 +11,31 @@
         </div>
       </div>
 
+      <!-- Отображение реакций -->
+      <div v-if="message.reactions" class="reactions-container">
+        <!-- Если это массив реакций (как на бэкенде) -->
+        <template v-if="Array.isArray(message.reactions)">
+          <div
+            v-for="(r, idx) in message.reactions"
+            :key="idx"
+            class="reaction-pill"
+          >
+            <span class="reaction-emoji">{{ getReactionEmoji(r.reactionEnum) }}</span>
+            <span class="reaction-count" v-if="Number(r.count) > 0">{{ r.count }}</span>
+          </div>
+        </template>
+        <!-- Если это одна реакция (попытка в интерфейсе) -->
+        <template v-else-if="message.reactions.reactionEnum">
+          <div class="reaction-pill">
+            <span class="reaction-emoji">{{ getReactionEmoji(message.reactions.reactionEnum) }}</span>
+            <span class="reaction-count" v-if="Number(message.reactions.count) > 0">{{ message.reactions.count }}</span>
+          </div>
+        </template>
+      </div>
+
       <div class="message-meta">
         <span>{{ message.time }}</span> <ReactionMessage :messageId="message.id" />
       </div>
-     
     </div>
   </div>
 </template>
@@ -35,6 +55,27 @@ export interface Message {
   own?: boolean
   /** Массив от 1 до 9 изображений */
   images?: string[]
+
+  reactions?: {
+    reactionEnum: Number
+    count: Number
+  } | Array<{
+    reactionEnum: Number
+    count: Number
+  }>
+}
+
+const getReactionEmoji = (enumVal: any): string => {
+  const val = Number(enumVal)
+  switch (val) {
+    case 1: return '👍'
+    case 2: return '❤️'
+    case 3: return '🤡'
+    case 4: return '💩'
+    case 5: return '🔥'
+    case 6: return '👎'
+    default: return ''
+  }
 }
 
 type GridClassName = '' | `grid-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
@@ -268,5 +309,38 @@ function itemClass(): ItemClassName {
 
 .message-bubble.other .message-meta {
   color: rgba(255, 255, 255, 0.35);
+}
+
+/* Reactions */
+.reactions-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 12px 8px;
+}
+
+.reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.message-bubble.own .reaction-pill {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.reaction-emoji {
+  font-size: 0.85rem;
+}
+
+.reaction-count {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
 }
 </style>

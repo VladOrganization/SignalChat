@@ -6,7 +6,11 @@ export interface Message {
   text: string
   userName: string
   time: string,
-  images:string[]
+  images:string[],
+  reactions:{
+    reactionEnum:Number
+    count:Number
+  }
 }
 
 export const useChatStore = defineStore('chat', () => {

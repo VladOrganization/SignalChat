@@ -23,6 +23,7 @@
             time: formatTime(msg.time),
             own: msg.userName === auth.userName,
             images: msg.images,
+            reactions:msg.reactions
           }"
         >
         </MessageBubble>
@@ -56,7 +57,6 @@ import { startSignalR, stopSignalR } from '@/services/signalr'
 import ImageUploadButton from '@/components/ImageUploadButton.vue'
 import ImagePreviewGrid from '@/components/ImagePreviewGrid.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
-import ReactionMessage from '@/components/ReactionMessage.vue'
 
 const images = ref<ImageFile[]>([])
 let idCounter = 0
