@@ -23,19 +23,20 @@ http.interceptors.response.use(
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true
 
-      try {
-        const data = await api.refresh(auth.refreshToken!)
-        auth.setAuth(data)
-        original.headers['Authorization'] = `Bearer ${data.accessToken}`
-        return http(original)
-      } catch (refreshErr) {
-        auth.logout()
-        return Promise.reject(refreshErr)
-      }
+      await api
+        .refresh(auth.refreshToken!)
+        .then((data) => {
+          auth.setAuth(data)
+          original.headers['Authorization'] = `Bearer ${data.accessToken}`
+        })
+        .catch((err) => {
+          useAuthStore().logout()
+        })
+
+      return http(original)
     }
 
-    auth.logout()
-    return Promise.reject(err)
+    useAuthStore().logout()
   },
 )
 

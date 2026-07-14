@@ -5,7 +5,7 @@ using SignalChat.Backend.Models;
 
 namespace SignalChat.Backend.Features.Chat.ReactionMessage
 {
-    public record ReactionMessageCommand(Guid MessageId, string UserId, ReactionEnum Reaction) : IRequest;
+    public record ReactionMessageCommand(Guid MessageId, Guid UserId, ReactionEnum Reaction) : IRequest;
 }
 
     

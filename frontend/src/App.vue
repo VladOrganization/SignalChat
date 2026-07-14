@@ -10,16 +10,6 @@ import ChatView from '@/components/ChatView.vue'
 
 const auth = useAuthStore()
 
-//смотрю есть ли токен в адресной строке, если есть, то сохраняю его в хранилище и убираю из адресной строки
-const params = new URLSearchParams(window.location.search)
-const accessToken = params.get('access_token')
-
-if (accessToken) {
-  auth.setAuth({ accessToken, refreshToken: '' })
-  window.history.replaceState({}, '', '/') // Стирает токены из адресной строки
-}
-    
-
 function onAuthenticated() {}
 function onLogout() {}
 </script>

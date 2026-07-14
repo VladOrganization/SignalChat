@@ -29,7 +29,7 @@ public class AuthControllerTests(IntegrationTestFactory factory)
         Assert.NotEmpty(body.Code);
         Assert.NotEmpty(body.AccessToken);
         Assert.NotEmpty(body.RefreshToken);
-        Assert.NotEqual(string.Empty, body.Id);
+        Assert.NotEqual(Guid.Empty, body.Id);
     }
 
     [Fact]

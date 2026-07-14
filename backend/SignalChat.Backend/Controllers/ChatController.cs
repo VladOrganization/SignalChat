@@ -2,7 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OpenIddict.Abstractions;
+using SignalChat.Backend.Database.Entities.Enums;
 using SignalChat.Backend.Exceptions;
 using SignalChat.Backend.Features.Chat.GetMessages;
 using SignalChat.Backend.Features.Chat.ReactionMessage;
@@ -25,21 +25,21 @@ public class ChatController(ISender sender) : ControllerBase
     [HttpPost("messages")]
     public Task<MessageDto> SendMessage([FromBody] SendMessageRequest request, CancellationToken ct)
     {
-        var userIdStr = User.FindFirstValue(OpenIddictConstants.Claims.Subject);
-        if (userIdStr is null)
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var userId))
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new SendMessageCommand(userIdStr, request.Text,request.ImageUrl), ct);
+        return sender.Send(new SendMessageCommand(userId, request.Text,request.ImageUrl), ct);
     }
 
     [Authorize]
     [HttpPost("reactions")]
     public Task ReactionMessage([FromBody] ReactionMessageRequest request, CancellationToken ct)
     {
-        var userIdStr = User.FindFirstValue(OpenIddictConstants.Claims.Subject);
-        if (userIdStr is null)
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var userId))
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new ReactionMessageCommand(request.MessageId,userIdStr, request.Reaction), ct);
+        return sender.Send(new ReactionMessageCommand(request.MessageId, userId, request.Reaction), ct);
     }
 }

@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SignalChat.Backend.Database.Entities;
 
 namespace SignalChat.Backend.Database;
 
-public class ChatDbContext(DbContextOptions<ChatDbContext> dbContextOptions) : IdentityDbContext<User>(dbContextOptions)
+public class ChatDbContext(DbContextOptions<ChatDbContext> dbContextOptions) : DbContext(dbContextOptions)
 {
     public DbSet<User> Users { get; set; }
     public DbSet<Message> Messages { get; set; }
@@ -12,8 +11,8 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> dbContextOptions) : I
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChatDbContext).Assembly);
-        modelBuilder.UseOpenIddict();
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(ChatDbContext).Assembly
+        );
     }
 }

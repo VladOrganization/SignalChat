@@ -6,4 +6,4 @@ using SignalChat.Backend.Models;
 
 namespace SignalChat.Backend.Features.Chat.SendMessage;
 
-public record SendMessageCommand(string UserId, string Text, List<string>? Images) : IRequest<MessageDto>;
+public record SendMessageCommand(Guid UserId, string Text, List<string>? Images) : IRequest<MessageDto>;
