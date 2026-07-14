@@ -12,15 +12,15 @@ using SignalChat.Backend.Database;
 namespace SignalChat.Backend.Migrations
 {
     [DbContext(typeof(ChatDbContext))]
-    [Migration("20260321155843_UpdateReactionTable")]
-    partial class UpdateReactionTable
+    [Migration("20260501125724_createReactionsTable")]
+    partial class createReactionsTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -83,9 +83,14 @@ namespace SignalChat.Backend.Migrations
                     b.Property<Guid>("MessageId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("MessageId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Reactions");
                 });
@@ -157,13 +162,26 @@ namespace SignalChat.Backend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SignalChat.Backend.Database.Entities.User", "User")
+                        .WithMany("Reaction")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Message");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Message", b =>
                 {
                     b.Navigation("Images");
 
+                    b.Navigation("Reaction");
+                });
+
+            modelBuilder.Entity("SignalChat.Backend.Database.Entities.User", b =>
+                {
                     b.Navigation("Reaction");
                 });
 #pragma warning restore 612, 618

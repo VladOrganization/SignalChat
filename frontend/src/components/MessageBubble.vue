@@ -7,7 +7,7 @@
       <div class="message-text" v-if="message.text">{{ message.text }}</div>
       <div v-if="imageCount > 0" class="image-grid" :class="gridClass">
         <div v-for="(img, i) in message.images" :key="i" class="grid-item" :class="itemClass()">
-          <img :src="`${baseURL}/${img}`" loading="lazy" alt="" />
+          <img :src="`/${img}`" loading="lazy" alt="" />
         </div>
       </div>
 

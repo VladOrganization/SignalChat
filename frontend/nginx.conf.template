@@ -1,0 +1,68 @@
+# Docker Engine's embedded DNS. Resolving via a variable (below) instead of a
+# bare hostname in proxy_pass defers lookup to request time, so nginx still
+# starts even if the backend container isn't up/resolvable yet.
+resolver 127.0.0.11 valid=10s;
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    client_max_body_size 100m;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    # proxy_pass deliberately has no path after $backend: with a variable,
+    # nginx can't do its usual location-prefix rewrite, so a literal suffix
+    # here (e.g. "$backend/api/") would replace the request URI instead of
+    # extending it. With no path, nginx forwards the original URI as-is,
+    # which is what we want since the backend's routes already include /api.
+    location /api/ {
+        set $backend "${BACKEND_BASE_URL}";
+        proxy_pass $backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /images/ {
+        set $backend "${BACKEND_BASE_URL}";
+        proxy_pass $backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /hubs/ {
+        set $backend "${BACKEND_BASE_URL}";
+        proxy_pass $backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location = /favicon.ico {
+        access_log off;
+        log_not_found off;
+    }
+}
