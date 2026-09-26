@@ -79,49 +79,55 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { useAuthStore } from '@/stores/auth';
-const authStore = useAuthStore()
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
+const router = useRouter()
 const emit = defineEmits<{ (e: 'authenticated'): void }>()
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7093'
 
-async function loginWithGoogle() {
-  const googleAuthUrl = `${API_BASE_URL}/api/auth/google/login`;
-  window.location.href = googleAuthUrl;
+// ========== Google OAuth ==========
+function loginWithGoogle() {
+  window.location.href = `${API_BASE_URL}/api/auth/google/login`
 }
 
+function handleGoogleCallback() {
+  const token = new URLSearchParams(window.location.search).get('token')
+  if (!token) return
 
+  authStore.setAuth({ accessToken: token, refreshToken: '' })
+
+  // router.replace уберёт ?token= из истории и перейдёт на защищённый роут
+  router.replace('/global-chat')
+}
+
+onMounted(() => {
+  handleGoogleCallback()
+})
 
 // ========== Реактивные данные ==========
 const isLogin = ref(false)
 
-const registerData = ref({
-  userName: '',
-  email: '',
-  password: '',
-})
-
-const loginData = ref({
-  email: '',
-  password: '',
-})
+const registerData = ref({ userName: '', email: '', password: '' })
+const loginData = ref({ email: '', password: '' })
 
 const loading = ref(false)
 const error = ref('')
 const registeredCode = ref('')
 
-// ========== Валидация форм ==========
+// ========== Валидация ==========
 const isRegisterFormValid = computed(() => {
   const { userName, email, password } = registerData.value
-  return userName.trim() && email.trim() && password.trim()
+  return !!(userName.trim() && email.trim() && password.trim())
 })
 
 const isLoginFormValid = computed(() => {
   const { email, password } = loginData.value
-  return email.trim() && password.trim()
+  return !!(email.trim() && password.trim())
 })
 
 // ========== Переключение режима ==========
@@ -136,19 +142,15 @@ function toggleMode() {
   registeredCode.value = ''
 }
 
-// ========== Общий обработчик отправки ==========
+// ========== Общий submit ==========
 async function handleSubmit() {
   error.value = ''
   registeredCode.value = ''
-
-  if (isLogin.value) {
-    await login()
-  } else {
-    await register()
-  }
+  if (isLogin.value) await login()
+  else await register()
 }
 
-// ========== Регистрация (без изменений) ==========
+// ========== Регистрация ==========
 async function register() {
   const { userName, email, password } = registerData.value
   if (!userName.trim() || !email.trim() || !password.trim()) return
@@ -167,15 +169,18 @@ async function register() {
     }
     registerData.value = { userName: '', email: '', password: '' }
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Ошибка регистрации'
+    if (axios.isAxiosError(e) && e.response) {
+      const d = e.response.data as { error?: string; errors?: string[] }
+      error.value = d.error || d.errors?.join(', ') || 'Ошибка регистрации'
+    } else {
+      error.value = e instanceof Error ? e.message : 'Ошибка регистрации'
+    }
   } finally {
     loading.value = false
   }
 }
 
-// ============================================================
-// 🚀 УЛУЧШЕННЫЙ МЕТОД ВХОДА ЧЕРЕЗ OPENIDDICT (/connect/token)
-// ============================================================
+// ========== Вход через OpenIddict ==========
 async function login() {
   const { email, password } = loginData.value
   if (!email.trim() || !password.trim()) return
@@ -184,44 +189,32 @@ async function login() {
   error.value = ''
 
   try {
-    // 1. Формируем тело запроса в формате x-www-form-urlencoded
     const params = new URLSearchParams()
     params.append('grant_type', 'password')
     params.append('username', email.trim())
     params.append('password', password.trim())
-  
+
     const response = await axios.post<{
       access_token: string
       refresh_token: string
       expires_in: number
       token_type: string
-    }>(
-      `${API_BASE_URL}/connect/token`,
-      params,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
-    )
+    }>(`${API_BASE_URL}/connect/token`, params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
 
-    // 3. Извлекаем токены
     const accessToken = response.data.access_token
-    const refreshToken:string = response.data.refresh_token
+    const refreshToken: string = response.data.refresh_token
 
-    authStore.setAuth({accessToken,refreshToken});
-    // 5. Устанавливаем заголовок Authorization для всех последующих запросов (глобально)
+    authStore.setAuth({ accessToken, refreshToken })
     axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
-    // 6. Сигнализируем родителю об успешном входе
     emit('authenticated')
-    
-    // 7. Очищаем форму
+
     loginData.value = { email: '', password: '' }
   } catch (e: unknown) {
     if (axios.isAxiosError(e) && e.response) {
-      // OpenIddict возвращает ошибку в полях error или error_description
-      const errorData = e.response.data as { error?: string; error_description?: string }
-      error.value = errorData.error_description || errorData.error || 'Неверный email или пароль'
+      const d = e.response.data as { error?: string; error_description?: string }
+      error.value = d.error_description || d.error || 'Неверный email или пароль'
     } else {
       error.value = e instanceof Error ? e.message : 'Ошибка соединения с сервером'
     }
@@ -232,7 +225,6 @@ async function login() {
 </script>
 
 <style scoped>
-/* ===== Стили (без изменений) ===== */
 .auth-wrapper {
   min-height: 100vh;
   display: flex;
