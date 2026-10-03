@@ -72,7 +72,7 @@ namespace SignalChat.Backend.Controllers
             
             _cache.Remove(code);
 
-            return Ok("Email подтверждён, пользователь успешно зарегистрирован!");
+            return Ok("Email подтверждён, войдите в аккаунт");
         }
 
         
@@ -110,7 +110,7 @@ namespace SignalChat.Backend.Controllers
                 {
                     to_email = request.Email,
                     message = "Подтвердите вашу почту\n" +
-                              $"Пожалуйста, подтвердите регистрацию, перейдя по <a href='{callbackUrl}'>ссылке</a>."
+                              $"Пожалуйста, подтвердите регистрацию, перейдя по<html><body><a href='{callbackUrl}'>ссылке</a></body></html>."
                 });
 
             return Ok(new { message = "Письмо отправлено. Подтвердите email для завершения регистрации." });

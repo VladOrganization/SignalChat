@@ -156,7 +156,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(corsPolicyName,
         policyBuilder => policyBuilder
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(builder.Configuration["Front-Url:Url"] ?? "")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials()

@@ -31,11 +31,6 @@
             <button type="submit" :disabled="loading || !isRegisterFormValid">
               {{ loading ? 'Подождите...' : 'Зарегистрироваться' }}
             </button>
-            <p v-if="registeredCode" class="code-hint">
-              Ваш код для входа: <strong>{{ registeredCode }}</strong>
-              <br />
-              <small>Сохраните его — он понадобится для входа в следующий раз</small>
-            </p>
           </form>
           <div class="toggle-link">
             <span>Уже есть аккаунт?</span>
@@ -117,7 +112,6 @@ const loginData = ref({ email: '', password: '' })
 
 const loading = ref(false)
 const error = ref('')
-const registeredCode = ref('')
 
 // ========== Валидация ==========
 const isRegisterFormValid = computed(() => {
@@ -139,13 +133,11 @@ function toggleMode() {
   } else {
     loginData.value = { email: '', password: '' }
   }
-  registeredCode.value = ''
 }
 
 // ========== Общий submit ==========
 async function handleSubmit() {
   error.value = ''
-  registeredCode.value = ''
   if (isLogin.value) await login()
   else await register()
 }
@@ -157,16 +149,12 @@ async function register() {
 
   loading.value = true
   try {
-    const response = await axios.post(`${API_BASE_URL}/register`, {
+    await axios.post(`${API_BASE_URL}/register`, {
       userName: userName.trim(),
       email: email.trim(),
       password: password.trim(),
     })
-    if (response.data?.code) {
-      registeredCode.value = response.data.code
-    } else {
-      emit('authenticated')
-    }
+    
     registerData.value = { userName: '', email: '', password: '' }
   } catch (e: unknown) {
     if (axios.isAxiosError(e) && e.response) {
