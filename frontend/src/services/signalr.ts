@@ -15,7 +15,7 @@ export async function startSignalR() {
   const auth = useAuthStore()
 
   connection = new HubConnectionBuilder()
-    .withUrl(`${import.meta.env.VITE_API_BASE_URL}/hubs/chat`, {
+    .withUrl('/hubs/chat', {
       accessTokenFactory: () => auth.accessToken ?? '',
     })
     .withAutomaticReconnect()

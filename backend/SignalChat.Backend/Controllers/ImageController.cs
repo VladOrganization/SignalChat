@@ -16,7 +16,11 @@ public class ImageController : ControllerBase
         _env = env;
     }
 
+    private const long MaxRequestSizeBytes = 100 * 1024 * 1024; //100MB
+    private const long MaxFileSizeBytes = 20 * 1024 * 1024; //20MB
+
     [HttpPost("save")]
+    [RequestSizeLimit(MaxRequestSizeBytes)]
     public async Task<ActionResult<List<string>>> UploadAvatar(List<IFormFile> file)
     {
         string[] availableFormats = [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".avif", ".gif"];
@@ -30,13 +34,13 @@ public class ImageController : ControllerBase
             {
                 return BadRequest("File is empty");
             }
-            
+
             if (!availableFormats.Contains(Path.GetExtension(format.FileName).ToLower()))
             {
                 return BadRequest("File format not supported");
             }
 
-            if (format.Length > 20_000_000)
+            if (format.Length > MaxFileSizeBytes)
             {
                 return BadRequest("File is too large");
             }

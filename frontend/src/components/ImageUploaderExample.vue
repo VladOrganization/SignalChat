@@ -16,7 +16,6 @@ import { ref } from 'vue'
 import ImageDropZone from '@/components/ImageDropZone.vue'
 import ImageUploadButton from '@/components/ImageUploadButton.vue'
 import ImagePreviewGrid from '@/components/ImagePreviewGrid.vue'
-import * as trace_events from 'node:trace_events'
 
 const images = ref<ImageFile[]>([])
 let idCounter = 0

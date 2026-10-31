@@ -69,8 +69,6 @@ import { computed } from 'vue'
 import ReactionMessage from '@/components/ReactionMessage.vue'
 import { getTelegramColor, getInitials } from '@/utils/colors' // Измените на '@/utils/color', если файл без 's'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL as string
-
 export interface Message {
   id: string
   text: string

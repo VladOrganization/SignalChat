@@ -52,8 +52,7 @@ async function selectOption(option:Number) {
   );
 }
 
-
-const options = [
+const options: ReactionOption[] = [
   {id:1, text: '👍', value: '👍' },
   {id:2, text: '❤️', value: '❤️' },
   {id:3, text: '🤡', value: '🤡' },
