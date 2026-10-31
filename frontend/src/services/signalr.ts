@@ -7,6 +7,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import type { Message } from '@/stores/chat'
+import { api } from '@/services/api'
 
 let connection: HubConnection | null = null
 
@@ -25,6 +26,19 @@ export async function startSignalR() {
 
   connection.on('ReceiveMessage', (msg: Message) => {
     chat.addMessage(msg)
+  })
+
+  connection.on('RecieveReaction', async () => {
+    try {
+      const result = await api.getMessages()
+      const messages = result.items.map(item => ({
+        ...item,
+        reactions: (item as any).reactions || { reactionEnum: 0, count: 0 }
+      })) as any[]
+      chat.setMessages(messages, result.totalCount, result.page)
+    } catch (e) {
+      console.error(e)
+    }
   })
 
   await connection.start()

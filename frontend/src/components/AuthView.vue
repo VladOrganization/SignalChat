@@ -3,75 +3,209 @@
     <div class="auth-card">
       <h1>SignalChat</h1>
 
-      <p class="hint">
-        Введите <strong>имя</strong> для регистрации<br />
-        или <strong>#код</strong> для входа
-      </p>
+      <div class="flip-container" :class="{ flipped: isLogin }">
+        <!-- Сторона регистрации (front) -->
+        <div class="flip-card front">
+          <form @submit.prevent="handleSubmit">
+            <p class="hint">Создайте аккаунт, заполнив поля</p>
+            <input
+              v-model="registerData.userName"
+              type="text"
+              placeholder="Имя пользователя"
+              autofocus
+              :disabled="loading"
+            />
+            <input
+              v-model="registerData.email"
+              type="email"
+              placeholder="Email"
+              :disabled="loading"
+            />
+            <input
+              v-model="registerData.password"
+              type="password"
+              placeholder="Пароль"
+              :disabled="loading"
+            />
+            <p v-if="error" class="error">{{ error }}</p>
+            <button type="submit" :disabled="loading || !isRegisterFormValid">
+              {{ loading ? 'Подождите...' : 'Зарегистрироваться' }}
+            </button>
+          </form>
+          <div class="toggle-link">
+            <span>Уже есть аккаунт?</span>
+            <button type="button" @click="toggleMode">Войти</button>
+          </div>
+        </div>
 
-      <form @submit.prevent="submit">
-        <input
-          v-model="input"
-          type="text"
-          placeholder="Имя или #код"
-          autofocus
-          :disabled="loading"
-        />
-        <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit" :disabled="loading || !input.trim()">
-          {{ loading ? 'Подождите...' : 'Войти' }}
-        </button>
-      </form>
-
-      <p v-if="registeredCode" class="code-hint">
-        Ваш код для входа: <strong>{{ registeredCode }}</strong>
-        <br />
-        <small>Сохраните его — он понадобится для входа в следующий раз</small>
-      </p>
+        <!-- Сторона входа (back) -->
+        <div class="flip-card back">
+          <form @submit.prevent="handleSubmit">
+            <p class="hint">Введите данные для входа</p>
+            <input
+              v-model="loginData.email"
+              type="email"
+              placeholder="Email"
+              autofocus
+              :disabled="loading"
+            />
+            <input
+              v-model="loginData.password"
+              type="password"
+              placeholder="Пароль"
+              :disabled="loading"
+            />
+            <p v-if="error" class="error">{{ error }}</p>
+            <button type="submit" :disabled="loading || !isLoginFormValid">
+              {{ loading ? 'Подождите...' : 'Войти' }}
+            </button>
+          </form>
+          <div class="toggle-link">
+            <span>Нет аккаунта?</span>
+            <button type="button" @click="toggleMode">Зарегистрироваться</button>
+          </div>
+          <button type="button" class="google-btn" @click="loginWithGoogle">
+            <i class="fab fa-google"></i> Войти через Google
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { api } from '@/services/api'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
+const router = useRouter()
 const emit = defineEmits<{ (e: 'authenticated'): void }>()
 
-const auth = useAuthStore()
-const input = ref('')
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7093'
+
+// ========== Google OAuth ==========
+function loginWithGoogle() {
+  window.location.href = `${API_BASE_URL}/api/auth/google/login`
+}
+
+function handleGoogleCallback() {
+  const token = new URLSearchParams(window.location.search).get('token')
+  if (!token) return
+
+  authStore.setAuth({ accessToken: token, refreshToken: '' })
+
+  // router.replace уберёт ?token= из истории и перейдёт на защищённый роут
+  router.replace('/global-chat')
+}
+
+onMounted(() => {
+  handleGoogleCallback()
+})
+
+// ========== Реактивные данные ==========
+const isLogin = ref(false)
+
+const registerData = ref({ userName: '', email: '', password: '' })
+const loginData = ref({ email: '', password: '' })
+
 const loading = ref(false)
 const error = ref('')
-const registeredCode = ref('')
 
-async function submit() {
-  const val = input.value.trim()
-  if (!val) return
+// ========== Валидация ==========
+const isRegisterFormValid = computed(() => {
+  const { userName, email, password } = registerData.value
+  return !!(userName.trim() && email.trim() && password.trim())
+})
+
+const isLoginFormValid = computed(() => {
+  const { email, password } = loginData.value
+  return !!(email.trim() && password.trim())
+})
+
+// ========== Переключение режима ==========
+function toggleMode() {
+  isLogin.value = !isLogin.value
+  error.value = ''
+  if (isLogin.value) {
+    registerData.value = { userName: '', email: '', password: '' }
+  } else {
+    loginData.value = { email: '', password: '' }
+  }
+}
+
+// ========== Общий submit ==========
+async function handleSubmit() {
+  error.value = ''
+  if (isLogin.value) await login()
+  else await register()
+}
+
+// ========== Регистрация ==========
+async function register() {
+  const { userName, email, password } = registerData.value
+  if (!userName.trim() || !email.trim() || !password.trim()) return
+
+  loading.value = true
+  try {
+    await axios.post(`${API_BASE_URL}/register`, {
+      userName: userName.trim(),
+      email: email.trim(),
+      password: password.trim(),
+    })
+    
+    registerData.value = { userName: '', email: '', password: '' }
+  } catch (e: unknown) {
+    if (axios.isAxiosError(e) && e.response) {
+      const d = e.response.data as { error?: string; errors?: string[] }
+      error.value = d.error || d.errors?.join(', ') || 'Ошибка регистрации'
+    } else {
+      error.value = e instanceof Error ? e.message : 'Ошибка регистрации'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// ========== Вход через OpenIddict ==========
+async function login() {
+  const { email, password } = loginData.value
+  if (!email.trim() || !password.trim()) return
 
   loading.value = true
   error.value = ''
-  registeredCode.value = ''
 
   try {
-    let response
+    const params = new URLSearchParams()
+    params.append('grant_type', 'password')
+    params.append('username', email.trim())
+    params.append('password', password.trim())
 
-    if (val.startsWith('#')) {
-      const code = val.slice(1).trim()
-      response = await api.login(code)
-    } else {
-      response = await api.register(val)
-      registeredCode.value = response.code
-    }
+    const response = await axios.post<{
+      access_token: string
+      refresh_token: string
+      expires_in: number
+      token_type: string
+    }>(`${API_BASE_URL}/connect/token`, params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
 
-    auth.setAuth(response)
+    const accessToken = response.data.access_token
+    const refreshToken: string = response.data.refresh_token
 
-    if (registeredCode.value) {
-      setTimeout(() => emit('authenticated'), 2500)
-    } else {
-      emit('authenticated')
-    }
+    authStore.setAuth({ accessToken, refreshToken })
+    axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
+    emit('authenticated')
+
+    loginData.value = { email: '', password: '' }
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Произошла ошибка'
+    if (axios.isAxiosError(e) && e.response) {
+      const d = e.response.data as { error?: string; error_description?: string }
+      error.value = d.error_description || d.error || 'Неверный email или пароль'
+    } else {
+      error.value = e instanceof Error ? e.message : 'Ошибка соединения с сервером'
+    }
   } finally {
     loading.value = false
   }
@@ -95,6 +229,7 @@ async function submit() {
   max-width: 380px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   text-align: center;
+  perspective: 1000px;
 }
 
 h1 {
@@ -104,17 +239,50 @@ h1 {
   letter-spacing: 2px;
 }
 
-.hint {
-  color: #8888aa;
-  font-size: 0.9rem;
-  margin: 0 0 24px;
-  line-height: 1.6;
+.flip-container {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  transition: transform 0.6s ease;
+  transform-style: preserve-3d;
+}
+
+.flip-container.flipped {
+  transform: rotateY(180deg);
+}
+
+.flip-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.flip-card.front {
+  z-index: 2;
+  transform: rotateY(0deg);
+}
+
+.flip-card.back {
+  transform: rotateY(180deg);
 }
 
 form {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.hint {
+  color: #8888aa;
+  font-size: 0.9rem;
+  margin: 0 0 8px;
+  line-height: 1.6;
 }
 
 input {
@@ -136,7 +304,7 @@ input::placeholder {
   color: #5555aa;
 }
 
-button {
+button[type="submit"] {
   padding: 12px;
   border-radius: 8px;
   border: none;
@@ -148,11 +316,11 @@ button {
   transition: background 0.2s;
 }
 
-button:hover:not(:disabled) {
+button[type="submit"]:hover:not(:disabled) {
   background: #7c73ff;
 }
 
-button:disabled {
+button[type="submit"]:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -165,7 +333,7 @@ button:disabled {
 }
 
 .code-hint {
-  margin-top: 20px;
+  margin-top: 12px;
   padding: 12px;
   background: #0f3460;
   border-radius: 8px;
@@ -182,5 +350,56 @@ button:disabled {
 
 small {
   color: #8888aa;
+}
+
+.toggle-link {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: #8888aa;
+}
+
+.toggle-link button {
+  background: none;
+  border: none;
+  color: #6c63ff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.toggle-link button:hover {
+  color: #7c73ff;
+}
+
+.google-btn {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  color: #1a1a2e;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.google-btn:hover {
+  background: #f1f1f1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+}
+
+.google-btn i {
+  color: #db4437;
+  font-size: 1.1rem;
 }
 </style>

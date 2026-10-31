@@ -1,19 +1,64 @@
 <template>
   <div
-    class="message-bubble"
-    :class="[message.own ? 'own' : 'other', { 'has-images': imageCount > 0 }]"
+    class="message-wrapper"
+    :class="[message.own ? 'own' : 'other']"
   >
-    <div class="message-content">
-      <div class="message-text" v-if="message.text">{{ message.text }}</div>
+    <!-- Аватарка отправителя для чужих сообщений -->
+    <div
+      v-if="!message.own"
+      class="msg-avatar"
+      :style="{ backgroundColor: getTelegramColor(message.senderName) }"
+    >
+      {{ getInitials(message.senderName) }}
+    </div>
 
-      <div v-if="imageCount > 0" class="image-grid" :class="gridClass">
-        <div v-for="(img, i) in message.images" :key="i" class="grid-item" :class="itemClass()">
-          <img :src="`/${img}`" loading="lazy" alt="" />
+    <div
+      class="message-bubble"
+      :class="[message.own ? 'own' : 'other', { 'has-images': imageCount > 0 }]"
+    >
+      <div class="message-content">
+        <!-- Имя отправителя над сообщением -->
+        <div
+          v-if="!message.own && message.senderName"
+          class="msg-author-tg"
+          :style="{ color: getTelegramColor(message.senderName) }"
+        >
+          {{ message.senderName }}
         </div>
-      </div>
 
-      <div class="message-meta">
-        <span>{{ message.time }}</span>
+        <div class="message-text" v-if="message.text">{{ message.text }}</div>
+
+        <!-- Сетка изображений -->
+        <div v-if="imageCount > 0" class="image-grid" :class="gridClass">
+          <div v-for="(img, i) in message.images" :key="i" class="grid-item" :class="itemClass()">
+            <img :src="`${baseURL}/${img}`" loading="lazy" alt="" />
+          </div>
+        </div>
+
+        <!-- Реакции -->
+        <div v-if="message.reactions" class="reactions-container">
+          <template v-if="Array.isArray(message.reactions)">
+            <div
+              v-for="(r, idx) in message.reactions"
+              :key="idx"
+              class="reaction-pill"
+            >
+              <span class="reaction-emoji">{{ getReactionEmoji(r.reactionEnum) }}</span>
+              <span class="reaction-count" v-if="Number(r.count) > 0">{{ r.count }}</span>
+            </div>
+          </template>
+          <template v-else-if="message.reactions.reactionEnum">
+            <div class="reaction-pill">
+              <span class="reaction-emoji">{{ getReactionEmoji(message.reactions.reactionEnum) }}</span>
+              <span class="reaction-count" v-if="Number(message.reactions.count) > 0">{{ message.reactions.count }}</span>
+            </div>
+          </template>
+        </div>
+
+        <div class="message-meta">
+          <span>{{ message.time }}</span>
+          <ReactionMessage :messageId="message.id" />
+        </div>
       </div>
     </div>
   </div>
@@ -21,27 +66,38 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import ReactionMessage from '@/components/ReactionMessage.vue'
+import { getTelegramColor, getInitials } from '@/utils/colors' // Измените на '@/utils/color', если файл без 's'
 
 export interface Message {
-  /** Текст сообщения (обязательно) */
+  id: string
   text: string
-  /** Время отправки, например '12:05' */
   time: string
-  /** true — своё сообщение (справа), false — чужое (слева) */
   own?: boolean
-  /** Массив от 1 до 9 изображений */
+  senderName?: string
   images?: string[]
+  reactions?: { reactionEnum: number; count: number } | Array<{ reactionEnum: number; count: number }>
+}
+
+const getReactionEmoji = (enumVal: any): string => {
+  const val = Number(enumVal)
+  switch (val) {
+    case 1: return '👍'
+    case 2: return '❤️'
+    case 3: return '🤡'
+    case 4: return '💩'
+    case 5: return '🔥'
+    case 6: return '👎'
+    default: return ''
+  }
 }
 
 type GridClassName = '' | `grid-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
 type ItemClassName = 'natural' | 'square'
 
-const props = defineProps<{
-  message: Message
-}>()
+const props = defineProps<{ message: Message }>()
 
 const imageCount = computed<number>(() => props.message.images?.length ?? 0)
-
 const gridClass = computed<GridClassName>(() => {
   if (imageCount.value === 0) return ''
   return `grid-${imageCount.value}` as GridClassName
@@ -54,215 +110,114 @@ function itemClass(): ItemClassName {
 </script>
 
 <style scoped>
+.message-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.message-wrapper.own {
+  justify-content: flex-end;
+}
+
+.message-wrapper.other {
+  justify-content: flex-start;
+}
+
+.msg-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  user-select: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .message-bubble {
   --radius: 16px;
   --radius-inner: 8px;
   --gap: 3px;
 
-  max-width: 420px;
+  max-width: 85%;
   border-radius: var(--radius);
 }
 
+@media (min-width: 640px) {
+  .message-bubble {
+    max-width: 420px;
+  }
+}
+
+.msg-author-tg {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px 0 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.msg-author-tg:hover {
+  text-decoration: underline;
+}
+
 .message-bubble.own {
-  background: var(--bubble-own, #2d5af0);
-  align-self: flex-end;
+  background: var(--bubble-own, #0f3460);
   border-bottom-right-radius: 4px;
 }
 
 .message-bubble.other {
-  background: var(--bubble-other, #23232f);
-  align-self: flex-start;
+  background: var(--bubble-other, #16213e);
   border-bottom-left-radius: 4px;
 }
 
 .message-content {
-  margin: 6px;
+  margin: 4px 2px;
 }
 
 .message-text {
-  padding: 10px 14px;
+  padding: 6px 14px 8px;
   font-size: 0.935rem;
   line-height: 1.45;
   word-wrap: break-word;
 }
 
-/* ===== Image Grid ===== */
-.image-grid {
-  display: grid;
-  gap: var(--gap);
-}
+.image-grid { display: grid; gap: var(--gap); }
+.image-grid.grid-1 { grid-template-columns: 1fr; }
+.image-grid.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-item { position: relative; overflow: hidden; border-radius: var(--radius-inner); }
+.grid-item img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
-/* 1 — оригинальное соотношение */
-.image-grid.grid-1 {
-  grid-template-columns: 1fr;
-}
-
-/* 2 — два квадрата */
-.image-grid.grid-2 {
-  grid-template-columns: 1fr 1fr;
-}
-
-/* 3 — большое слева + 2 справа */
-.image-grid.grid-3 {
-  grid-template-columns: 2fr 1fr;
-  grid-template-rows: 1fr 1fr;
-}
-.image-grid.grid-3 .grid-item:first-child {
-  grid-row: 1 / 3;
-}
-
-/* 4 — сетка 2×2 */
-.image-grid.grid-4 {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-}
-
-/* 5 — 2 вытянутых + 3 стандартных снизу */
-.image-grid.grid-5 {
-  grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: 1fr 1fr 1fr;
-}
-.image-grid.grid-5 .grid-item:nth-child(1) {
-  grid-column: 1 / 4;
-  grid-row: 1 / 3;
-}
-.image-grid.grid-5 .grid-item:nth-child(2) {
-  grid-column: 4 / 7;
-  grid-row: 1 / 3;
-}
-.image-grid.grid-5 .grid-item:nth-child(3) {
-  grid-column: 1 / 3;
-  grid-row: 3;
-}
-.image-grid.grid-5 .grid-item:nth-child(4) {
-  grid-column: 3 / 5;
-  grid-row: 3;
-}
-.image-grid.grid-5 .grid-item:nth-child(5) {
-  grid-column: 5 / 7;
-  grid-row: 3;
-}
-
-/* 6 — по 2 в строке, 3 ряда */
-.image-grid.grid-6 {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
-}
-
-/* 7 — 4 стандартных (2×2) + 3 маленьких (1×3) */
-.image-grid.grid-7 {
-  grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: 1fr 1fr auto;
-}
-.image-grid.grid-7 .grid-item:nth-child(1) {
-  grid-column: 1 / 4;
-  grid-row: 1;
-}
-.image-grid.grid-7 .grid-item:nth-child(2) {
-  grid-column: 4 / 7;
-  grid-row: 1;
-}
-.image-grid.grid-7 .grid-item:nth-child(3) {
-  grid-column: 1 / 4;
-  grid-row: 2;
-}
-.image-grid.grid-7 .grid-item:nth-child(4) {
-  grid-column: 4 / 7;
-  grid-row: 2;
-}
-.image-grid.grid-7 .grid-item:nth-child(5) {
-  grid-column: 1 / 3;
-  grid-row: 3;
-}
-.image-grid.grid-7 .grid-item:nth-child(6) {
-  grid-column: 3 / 5;
-  grid-row: 3;
-}
-.image-grid.grid-7 .grid-item:nth-child(7) {
-  grid-column: 5 / 7;
-  grid-row: 3;
-}
-
-/* 8 — 2 стандартных + 6 маленьких (2×3) */
-.image-grid.grid-8 {
-  grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: 1fr auto auto;
-}
-.image-grid.grid-8 .grid-item:nth-child(1) {
-  grid-column: 1 / 4;
-  grid-row: 1;
-}
-.image-grid.grid-8 .grid-item:nth-child(2) {
-  grid-column: 4 / 7;
-  grid-row: 1;
-}
-.image-grid.grid-8 .grid-item:nth-child(3) {
-  grid-column: 1 / 3;
-  grid-row: 2;
-}
-.image-grid.grid-8 .grid-item:nth-child(4) {
-  grid-column: 3 / 5;
-  grid-row: 2;
-}
-.image-grid.grid-8 .grid-item:nth-child(5) {
-  grid-column: 5 / 7;
-  grid-row: 2;
-}
-.image-grid.grid-8 .grid-item:nth-child(6) {
-  grid-column: 1 / 3;
-  grid-row: 3;
-}
-.image-grid.grid-8 .grid-item:nth-child(7) {
-  grid-column: 3 / 5;
-  grid-row: 3;
-}
-.image-grid.grid-8 .grid-item:nth-child(8) {
-  grid-column: 5 / 7;
-  grid-row: 3;
-}
-
-/* 9 — сетка 3×3 */
-.image-grid.grid-9 {
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
-}
-
-/* ===== Grid Item ===== */
-.grid-item {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--radius-inner);
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.grid-item.square {
-  aspect-ratio: 1;
-}
-
-.grid-item img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.grid-item.natural img {
-  height: auto;
-  object-fit: contain;
-}
-
-/* Meta */
 .message-meta {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 4px;
-  padding: 0 12px 8px;
+  gap: 6px;
+  padding: 2px 12px 6px;
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.5);
 }
 
-.message-bubble.other .message-meta {
-  color: rgba(255, 255, 255, 0.35);
+.reactions-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 12px 6px;
+}
+
+.reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
 }
 </style>

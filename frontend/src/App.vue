@@ -1,6 +1,8 @@
 <template>
-  <AuthView v-if="!auth.isAuthenticated" @authenticated="onAuthenticated" />
-  <ChatView v-else @logout="onLogout" />
+  <div class="app-container">
+    <AuthView v-if="!auth.isAuthenticated" @authenticated="onAuthenticated" />
+    <ChatView v-else @logout="onLogout" />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -9,7 +11,6 @@ import AuthView from '@/components/AuthView.vue'
 import ChatView from '@/components/ChatView.vue'
 
 const auth = useAuthStore()
-
 function onAuthenticated() {}
 function onLogout() {}
 </script>
@@ -23,13 +24,26 @@ function onLogout() {}
   padding: 0;
 }
 
-body {
-  font-family: system-ui, -apple-system, sans-serif;
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  height: 100dvh; /* Корректная высота под мобильные браузеры */
+  overflow: hidden;
   background: #1a1a2e;
 }
 
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e0e0ff;
+}
+
+.app-container {
+  width: 100%;
+  height: 100%;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
