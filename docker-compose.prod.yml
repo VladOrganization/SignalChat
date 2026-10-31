@@ -1,0 +1,81 @@
+# Runs behind an already running Traefik (external network ${TRAEFIK_NETWORK}) that terminates TLS.
+# Images are built by GitHub Actions (.github/workflows/docker-publish.yml) and pulled from ghcr.io.
+# Settings come from .env (see .env.example).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ChatDb}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-SA} -d ${POSTGRES_DB:-ChatDb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ghcr.io/vladorganization/signal_chat_api:${TAG:-latest}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__ChatDb: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-ChatDb};Username=${POSTGRES_USER:?set POSTGRES_USER in .env};Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
+      Redis__ConnectionString: "redis:6379,abortConnect=false"
+      Jwt__SecretKey: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY in .env}
+      Jwt__Issuer: SignalChat
+      Jwt__Audience: SignalChat
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID in .env}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:?set GOOGLE_CLIENT_SECRET in .env}
+      Front-Url__Url: https://chat.vlados.tech
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend-images:/app/wwwroot/images
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      traefik.http.routers.signalchat-api.rule: Host(`chat-api.vlados.tech`)
+      traefik.http.routers.signalchat-api.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.signalchat-api.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-le}
+      traefik.http.services.signalchat-api.loadbalancer.server.port: "8080"
+
+  frontend:
+    image: ghcr.io/vladorganization/signal_chat_frontend:${TAG:-latest}
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      BACKEND_BASE_URL: "http://backend:8080"
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      traefik.http.routers.signalchat-front.rule: Host(`chat.vlados.tech`)
+      traefik.http.routers.signalchat-front.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.signalchat-front.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-le}
+      traefik.http.services.signalchat-front.loadbalancer.server.port: "80"
+
+networks:
+  traefik:
+    name: ${TRAEFIK_NETWORK:-proxy}
+    external: true
+
+volumes:
+  postgres-data:
+  backend-images:

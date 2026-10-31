@@ -61,4 +61,6 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          build-args: |
+            VITE_API_BASE_URL=https://chat-api.vlados.tech
           tags: ghcr.io/vladorganization/signal_chat_frontend:${{ env.TAG }}
