@@ -12,7 +12,7 @@ using SignalChat.Backend.Database;
 namespace SignalChat.Backend.Migrations
 {
     [DbContext(typeof(ChatDbContext))]
-    [Migration("20260507123113_fix")]
+    [Migration("20260503133054_fix")]
     partial class fix
     {
         /// <inheritdoc />

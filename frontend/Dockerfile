@@ -7,6 +7,11 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+
+# Vite inlines VITE_-prefixed vars into the bundle at build time, so the
+# browser-facing backend URL must be set here, not at container runtime.
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN npm run build
 
 FROM nginx:1.30-alpine AS final

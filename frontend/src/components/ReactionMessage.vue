@@ -42,10 +42,12 @@ function toggleDropdown() {
   isOpen.value = !isOpen.value
 }
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || 'https://localhost:7093'
+
 async function selectOption(option: ReactionOption) {
   isOpen.value = false
   await axios.post(
-    'https://localhost:7093/api/chat/reactions',
+    `${API_BASE_URL}/api/chat/reactions`,
     {
       messageId: reactionProps.messageId,
       reaction: option.id,

@@ -14,8 +14,10 @@ export async function startSignalR() {
     return
   }
 
+  const baseURL = (import.meta.env.VITE_API_BASE_URL as string) || 'https://localhost:7093'
+
   connection = new signalR.HubConnectionBuilder()
-    .withUrl('https://localhost:7093/chathub', {
+    .withUrl(`${baseURL}/chathub`, {
       accessTokenFactory: () => auth.accessToken || '',
     })
     .withAutomaticReconnect()
