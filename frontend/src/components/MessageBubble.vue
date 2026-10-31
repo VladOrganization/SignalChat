@@ -67,7 +67,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ReactionMessage from '@/components/ReactionMessage.vue'
-import { getTelegramColor, getInitials } from '@/utils/colors' // Измените на '@/utils/color', если файл без 's'
+import { getTelegramColor, getInitials } from '@/utils/colors' // Убедитесь, что путь к colors/color корректный
+
+const baseURL = (import.meta.env.VITE_API_BASE_URL as string) || 'https://localhost:7093'
 
 export interface Message {
   id: string
@@ -76,19 +78,28 @@ export interface Message {
   own?: boolean
   senderName?: string
   images?: string[]
-  reactions?: { reactionEnum: number; count: number } | Array<{ reactionEnum: number; count: number }>
+  reactions?:
+    | { reactionEnum: number; count: number }
+    | Array<{ reactionEnum: number; count: number }>
 }
 
-const getReactionEmoji = (enumVal: any): string => {
+const getReactionEmoji = (enumVal: unknown): string => {
   const val = Number(enumVal)
   switch (val) {
-    case 1: return '👍'
-    case 2: return '❤️'
-    case 3: return '🤡'
-    case 4: return '💩'
-    case 5: return '🔥'
-    case 6: return '👎'
-    default: return ''
+    case 1:
+      return '👍'
+    case 2:
+      return '❤️'
+    case 3:
+      return '🤡'
+    case 4:
+      return '💩'
+    case 5:
+      return '🔥'
+    case 6:
+      return '👎'
+    default:
+      return ''
   }
 }
 
@@ -116,11 +127,9 @@ function itemClass(): ItemClassName {
   gap: 8px;
   width: 100%;
 }
-
 .message-wrapper.own {
   justify-content: flex-end;
 }
-
 .message-wrapper.other {
   justify-content: flex-start;
 }
@@ -137,14 +146,12 @@ function itemClass(): ItemClassName {
   font-weight: 700;
   flex-shrink: 0;
   user-select: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .message-bubble {
   --radius: 16px;
   --radius-inner: 8px;
   --gap: 3px;
-
   max-width: 85%;
   border-radius: var(--radius);
 }
@@ -162,7 +169,6 @@ function itemClass(): ItemClassName {
   cursor: pointer;
   user-select: none;
 }
-
 .msg-author-tg:hover {
   text-decoration: underline;
 }
@@ -171,29 +177,40 @@ function itemClass(): ItemClassName {
   background: var(--bubble-own, #0f3460);
   border-bottom-right-radius: 4px;
 }
-
 .message-bubble.other {
   background: var(--bubble-other, #16213e);
   border-bottom-left-radius: 4px;
 }
-
 .message-content {
   margin: 4px 2px;
 }
-
 .message-text {
   padding: 6px 14px 8px;
   font-size: 0.935rem;
   line-height: 1.45;
   word-wrap: break-word;
 }
-
-.image-grid { display: grid; gap: var(--gap); }
-.image-grid.grid-1 { grid-template-columns: 1fr; }
-.image-grid.grid-2 { grid-template-columns: 1fr 1fr; }
-.grid-item { position: relative; overflow: hidden; border-radius: var(--radius-inner); }
-.grid-item img { display: block; width: 100%; height: 100%; object-fit: cover; }
-
+.image-grid {
+  display: grid;
+  gap: var(--gap);
+}
+.image-grid.grid-1 {
+  grid-template-columns: 1fr;
+}
+.image-grid.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+.grid-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-inner);
+}
+.grid-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .message-meta {
   display: flex;
   justify-content: flex-end;
@@ -203,14 +220,12 @@ function itemClass(): ItemClassName {
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.5);
 }
-
 .reactions-container {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   padding: 4px 12px 6px;
 }
-
 .reaction-pill {
   display: inline-flex;
   align-items: center;

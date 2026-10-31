@@ -7,25 +7,24 @@
     <div v-if="isOpen" class="dropdown-menu">
       <div
         v-for="option in options"
-        :key="option"
+        :key="option.id"
         class="dropdown-item"
         @click="selectOption(option)"
       >
         {{ option.text }}
       </div>
     </div>
-
-    <!-- Отображение выбранного значения -->
-    <!--<p v-if="selectedValue" class="selected-text">{{ selectedValue }}</p>-->
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import axios from 'axios'
-import {useAuthStore} from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
+
 const auth = useAuthStore()
 const isOpen = ref(false)
+
 const reactionProps = defineProps({
   messageId: {
     type: String,
@@ -33,36 +32,41 @@ const reactionProps = defineProps({
   },
 })
 
+interface ReactionOption {
+  id: number
+  text: string
+  value: string
+}
+
 function toggleDropdown() {
   isOpen.value = !isOpen.value
 }
 
-async function selectOption(option:Number) {
+async function selectOption(option: ReactionOption) {
   isOpen.value = false
-  await axios.post('https://localhost:7093/api/chat/reactions', 
-  {
-    messageId: reactionProps.messageId,
-    reaction: option.id,
-  },
-  {
-    headers: {
-      'Authorization': `Bearer ${auth.accessToken}`,
+  await axios.post(
+    'https://localhost:7093/api/chat/reactions',
+    {
+      messageId: reactionProps.messageId,
+      reaction: option.id,
     },
-  }
-  );
+    {
+      headers: {
+        'Authorization': `Bearer ${auth.accessToken}`,
+      },
+    }
+  )
 }
 
 const options: ReactionOption[] = [
-  {id:1, text: '👍', value: '👍' },
-  {id:2, text: '❤️', value: '❤️' },
-  {id:3, text: '🤡', value: '🤡' },
-  {id:4, text: '💩', value: '💩' },
-  {id:5, text: '🔥', value: '🔥' },
-  {id:6, text: '👎', value: '👎' },
-
+  { id: 1, text: '👍', value: '👍' },
+  { id: 2, text: '❤️', value: '❤️' },
+  { id: 3, text: '🤡', value: '🤡' },
+  { id: 4, text: '💩', value: '💩' },
+  { id: 5, text: '🔥', value: '🔥' },
+  { id: 6, text: '👎', value: '👎' },
 ]
 </script>
-
 
 <style scoped>
 .telegram-dropdown {
@@ -71,12 +75,11 @@ const options: ReactionOption[] = [
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Кнопка с плюсом в стиле Telegram */
 .plus-button {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background-color: #3390ec; /* Telegram blue */
+  background-color: #3390ec;
   border: none;
   color: white;
   font-size: 18px;
@@ -97,13 +100,11 @@ const options: ReactionOption[] = [
   transform: scale(0.96);
 }
 
-/* Выпадающее меню — как в Telegram */
-/* Выпадающее меню — появляется СВЕРХУ */
 .dropdown-menu {
   position: absolute;
-  bottom: 100%;        /* привязываем к нижнему краю кнопки */
+  bottom: 100%;
   left: 0;
-  margin-bottom: 8px;  /* отступ от кнопки */
+  margin-bottom: 8px;
   min-width: 50px;
   background-color: #ffffff;
   border-radius: 12px;
@@ -113,7 +114,6 @@ const options: ReactionOption[] = [
   padding: 6px 0;
 }
 
-/* Пункты списка */
 .dropdown-item {
   padding: 12px 16px;
   font-size: 16px;
@@ -126,14 +126,6 @@ const options: ReactionOption[] = [
   background-color: #f0f2f5;
 }
 
-/* Отображение выбранного значения */
-.selected-text {
-  margin-top: 12px;
-  font-size: 14px;
-  color: #5e6670;
-}
-
-/* Тёмная тема Telegram */
 @media (prefers-color-scheme: dark) {
   .dropdown-menu {
     background-color: #1c1c1e;
@@ -144,9 +136,6 @@ const options: ReactionOption[] = [
   }
   .dropdown-item:hover {
     background-color: #2c2c2e;
-  }
-  .selected-text {
-    color: #8e9eae;
   }
 }
 </style>
