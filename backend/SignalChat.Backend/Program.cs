@@ -178,14 +178,16 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-// Traefik terminates TLS and forwards plain HTTP from a container IP that isn't loopback,
-// so the default KnownNetworks/KnownProxies restriction would ignore its X-Forwarded-* headers.
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+// Traefik terminates TLS and forwards plain HTTP from a container IP that isn't loopback, so the
+// default KnownNetworks/KnownProxies (loopback-only) would ignore its X-Forwarded-* headers. Clear()
+// is required here: a `{ }` collection initializer adds nothing to the pre-populated defaults.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-    KnownNetworks = { },
-    KnownProxies = { },
-});
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.UseCors(corsPolicyName);
 app.UseStaticFiles();
