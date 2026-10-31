@@ -5,12 +5,15 @@ export interface Message {
   id: string
   text: string
   userName: string
-  time: string,
-  images:string[],
-  reactions:{
-    reactionEnum:Number
-    count:Number
-  }
+  time: string
+  images?: string[]
+  reactions?: {
+    reactionEnum: number
+    count: number
+  } | Array<{
+    reactionEnum: number
+    count: number
+  }>
 }
 
 export const useChatStore = defineStore('chat', () => {

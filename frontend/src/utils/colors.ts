@@ -36,12 +36,10 @@ export function getInitials(name?: string | null): string {
   const trimmed = name.trim()
   if (!trimmed) return 'U'
 
-  // Если имя состоит из нескольких слов (например, "Иван Иванов") -> "ИИ"
   const parts = trimmed.split(/\s+/)
-  if (parts.length >= 2 && parts[0] && parts[1]) {
+  if (parts.length >= 2 && parts[0]?.[0] && parts[1]?.[0]) {
     return (parts[0][0] + parts[1][0]).toUpperCase()
   }
 
-  // Если одно слово -> первые 2 буквы (например, "Alex" -> "AL")
   return trimmed.slice(0, 2).toUpperCase()
 }

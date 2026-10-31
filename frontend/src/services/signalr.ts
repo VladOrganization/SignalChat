@@ -1,52 +1,47 @@
-import {
-  HubConnection,
-  HubConnectionBuilder,
-  HubConnectionState,
-  LogLevel,
-} from '@microsoft/signalr'
+import * as signalR from '@microsoft/signalr'
 import { useAuthStore } from '@/stores/auth'
-import { useChatStore } from '@/stores/chat'
-import type { Message } from '@/stores/chat'
-import { api } from '@/services/api'
+import { useChatStore, type Message } from '@/stores/chat'
 
-let connection: HubConnection | null = null
+let connection: signalR.HubConnection | null = null
 
 export async function startSignalR() {
   const auth = useAuthStore()
-
-  connection = new HubConnectionBuilder()
-    .withUrl('/hubs/chat', {
-      accessTokenFactory: () => auth.accessToken ?? '',
-    })
-    .withAutomaticReconnect()
-    .configureLogging(LogLevel.Warning)
-    .build()
-
   const chat = useChatStore()
 
-  connection.on('ReceiveMessage', (msg: Message) => {
-    chat.addMessage(msg)
+  if (!auth.accessToken) return
+
+  if (connection && connection.state === signalR.HubConnectionState.Connected) {
+    return
+  }
+
+  connection = new signalR.HubConnectionBuilder()
+    .withUrl('https://localhost:7093/chathub', {
+      accessTokenFactory: () => auth.accessToken || '',
+    })
+    .withAutomaticReconnect()
+    .build()
+
+  connection.on('ReceiveMessage', (message: unknown) => {
+    chat.addMessage(message as Message)
   })
 
-  connection.on('RecieveReaction', async () => {
-    try {
-      const result = await api.getMessages()
-      const messages = result.items.map(item => ({
-        ...item,
-        reactions: (item as any).reactions || { reactionEnum: 0, count: 0 }
-      })) as any[]
-      chat.setMessages(messages, result.totalCount, result.page)
-    } catch (e) {
-      console.error(e)
-    }
+  connection.on('ReceiveReaction', (reactionData: unknown) => {
+    console.log('Reaction received:', reactionData)
   })
 
-  await connection.start()
+  try {
+    await connection.start()
+    console.log('SignalR Connected.')
+  } catch (err) {
+    console.error('SignalR Connection Error: ', err)
+    setTimeout(startSignalR, 5000)
+  }
 }
 
-export async function stopSignalR() {
-  if (connection && connection.state !== HubConnectionState.Disconnected) {
-    await connection.stop()
+export function stopSignalR() {
+  if (connection) {
+    connection.stop()
+    connection = null
+    console.log('SignalR Disconnected.')
   }
-  connection = null
 }
