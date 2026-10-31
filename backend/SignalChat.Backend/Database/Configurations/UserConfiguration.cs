@@ -14,15 +14,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(64);
 
-        builder.Property(u => u.Code)
-            .IsRequired()
-            .HasMaxLength(256);
+       
 
         builder.HasIndex(u => u.UserName)
             .IsUnique();
 
-        builder.HasIndex(u => u.Code)
-            .IsUnique();
+        
 
         builder.Property(u => u.RefreshToken)
             .HasMaxLength(36);

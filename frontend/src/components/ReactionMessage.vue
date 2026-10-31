@@ -7,7 +7,7 @@
     <div v-if="isOpen" class="dropdown-menu">
       <div
         v-for="option in options"
-        :key="option.value"
+        :key="option"
         class="dropdown-item"
         @click="selectOption(option)"
       >
@@ -16,26 +16,40 @@
     </div>
 
     <!-- Отображение выбранного значения -->
-    <p v-if="selectedValue" class="selected-text">
-      Выбрано: {{ selectedValue }}
-    </p>
+    <!--<p v-if="selectedValue" class="selected-text">{{ selectedValue }}</p>-->
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-
+import axios from 'axios'
+import {useAuthStore} from '@/stores/auth'
+const auth = useAuthStore()
 const isOpen = ref(false)
-const selectedValue = ref('apple')
-
+const reactionProps = defineProps({
+  messageId: {
+    type: String,
+    required: true,
+  },
+})
 
 function toggleDropdown() {
   isOpen.value = !isOpen.value
 }
 
 async function selectOption(option:Number) {
-  selectedValue.value = option.value
   isOpen.value = false
+  await axios.post('https://localhost:7093/api/chat/reactions', 
+  {
+    messageId: reactionProps.messageId,
+    reaction: option.id,
+  },
+  {
+    headers: {
+      'Authorization': `Bearer ${auth.accessToken}`,
+    },
+  }
+  );
 }
 
 
