@@ -2,6 +2,12 @@
   <div class="chat-layout">
     <header class="chat-header">
       <div class="user-info">
+        <div 
+          class="user-avatar"
+          :style="{ backgroundColor: getTelegramColor(auth.userName) }"
+        >
+          {{ getInitials(auth.userName) }}
+        </div>
         <span class="username">{{ auth.userName }}</span>
       </div>
       <button class="logout-btn" @click="logout">Выйти</button>
@@ -22,11 +28,11 @@
             text: msg.text,
             time: formatTime(msg.time),
             own: msg.userName === auth.userName,
+            senderName: msg.userName,
             images: msg.images,
-            reactions:msg.reactions
+            reactions: msg.reactions
           }"
-        >
-        </MessageBubble>
+        />
       </template>
     </main>
 
@@ -57,9 +63,7 @@ import { startSignalR, stopSignalR } from '@/services/signalr'
 import ImageUploadButton from '@/components/ImageUploadButton.vue'
 import ImagePreviewGrid from '@/components/ImagePreviewGrid.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
-
-const images = ref<ImageFile[]>([])
-let idCounter = 0
+import { getTelegramColor, getInitials } from '@/utils/colors' // Убедитесь, что путь к colors/color правильный
 
 export interface ImageFile {
   id: string
@@ -68,36 +72,23 @@ export interface ImageFile {
   file: File
 }
 
+const images = ref<ImageFile[]>([])
+let idCounter = 0
+
 function addFiles(files: File[]) {
   for (const file of files) {
+    if (images.value.length >= 9) return
     const url = URL.createObjectURL(file)
-
-    if (images.value.length >= 9) {
-      return
-    }
-
-    images.value.push({
-      id: String(idCounter++),
-      name: file.name,
-      url,
-      file, // оригинальный File-объект, если нужен для отправки на сервер
-    })
+    images.value.push({ id: String(idCounter++), name: file.name, url, file })
   }
 }
 
 function removeFile(index: number) {
   const [removed] = images.value.splice(index, 1)
-
-  if (!removed) {
-    return
-  }
-
-  URL.revokeObjectURL(removed.url)
+  if (removed) URL.revokeObjectURL(removed.url)
 }
 
-//end  import image
 const emit = defineEmits<{ (e: 'logout'): void }>()
-
 const auth = useAuthStore()
 const chat = useChatStore()
 const textModel = ref('')
@@ -107,6 +98,7 @@ const loadingMore = ref(false)
 const messagesRef = useTemplateRef('messages')
 
 function formatTime(iso: string) {
+  if (!iso) return ''
   const d = new Date(iso)
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
 }
@@ -118,20 +110,16 @@ async function scrollToBottom() {
   }
 }
 
-// Scroll to bottom only when a new SignalR message arrives (messages[0] changes)
 watch(
   () => chat.messages[0]?.id,
   (newId, oldId) => {
-    if (newId && newId !== oldId) {
-      scrollToBottom()
-    }
-  },
+    if (newId && newId !== oldId) scrollToBottom()
+  }
 )
 
 async function loadMore() {
   if (!chat.hasMore || loadingMore.value) return
   loadingMore.value = true
-
   const el = messagesRef.value!
   const prevScrollHeight = el.scrollHeight
   const prevScrollTop = el.scrollTop
@@ -149,14 +137,11 @@ async function loadMore() {
 function onScroll() {
   const el = messagesRef.value
   if (!el || loadingMore.value || !chat.hasMore) return
-  if (el.scrollTop <= 100) {
-    loadMore()
-  }
+  if (el.scrollTop <= 100) loadMore()
 }
 
 async function send() {
   const val = textModel.value
-
   let imagesPath: string[] = []
   if (images.value.length > 0) {
     sending.value = true
@@ -170,8 +155,6 @@ async function send() {
     await api.sendMessage(val, imagesPath)
     textModel.value = ''
     images.value = []
-  } catch {
-    // message arrives via SignalR so just clear on success
   } finally {
     sending.value = false
   }
@@ -196,7 +179,6 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-
   await startSignalR()
 })
 
@@ -209,16 +191,19 @@ onUnmounted(() => {
 .chat-layout {
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
   background: #1a1a2e;
   color: #e0e0ff;
+  overflow: hidden;
 }
 
 .chat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 10px 16px;
   background: #16213e;
   border-bottom: 1px solid #2a2a4a;
   flex-shrink: 0;
@@ -228,26 +213,32 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: #fff;
+  flex-shrink: 0;
 }
 
 .username {
   font-weight: 600;
-  font-size: 1rem;
-}
-
-.code-btn {
-  padding: 6px 14px;
-  border-radius: 6px;
-  border: 1px solid #2a2a4a;
-  background: transparent;
-  color: #8888aa;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: all 0.2s;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .logout-btn {
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid #2a2a4a;
   background: transparent;
@@ -255,6 +246,7 @@ onUnmounted(() => {
   cursor: pointer;
   font-size: 0.85rem;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .logout-btn:hover {
@@ -265,11 +257,12 @@ onUnmounted(() => {
 .messages {
   flex: 1;
   overflow-y: auto;
-  overflow-anchor: none;
-  padding: 20px;
+  overflow-x: hidden;
+  padding: 16px;
   display: flex;
   flex-direction: column-reverse;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
 }
 
 .status {
@@ -278,107 +271,63 @@ onUnmounted(() => {
   margin: auto;
 }
 
-.load-more-status {
-  margin: 0 0 8px;
-  font-size: 0.85rem;
-}
-
-.message {
-  display: flex;
-}
-
-.message.own {
-  justify-content: flex-end;
-}
-
-.bubble {
-  max-width: 70%;
-  background: #16213e;
-  border-radius: 12px 12px 12px 2px;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.message.own .bubble {
-  background: #0f3460;
-  border-radius: 12px 12px 2px 12px;
-}
-
-.msg-author {
-  font-size: 0.75rem;
-  color: #6c63ff;
-  font-weight: 600;
-}
-
-.message.own .msg-author {
-  display: none;
-}
-
-.msg-text {
-  font-size: 0.95rem;
-  word-break: break-word;
-  line-height: 1.4;
-}
-
-.msg-time {
-  font-size: 0.7rem;
-  color: #5555aa;
-  align-self: flex-end;
-}
-
 .chat-footer {
-  padding: 14px 20px;
+  padding: 10px 12px;
   background: #16213e;
   border-top: 1px solid #2a2a4a;
   flex-shrink: 0;
+  width: 100%;
 }
 
 .chat-footer form {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
 }
 
 .chat-footer input {
   flex: 1;
-  padding: 10px 16px;
+  min-width: 0;
+  padding: 10px 14px;
   border-radius: 8px;
   border: 1px solid #2a2a4a;
   background: #1a1a2e;
   color: #e0e0ff;
   font-size: 0.95rem;
   outline: none;
-  transition: border-color 0.2s;
 }
 
 .chat-footer input:focus {
   border-color: #6c63ff;
 }
 
-.chat-footer input::placeholder {
-  color: #5555aa;
-}
-
 .chat-footer button {
-  padding: 10px 20px;
+  padding: 10px 14px;
   border-radius: 8px;
   border: none;
   background: #6c63ff;
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.chat-footer button:hover:not(:disabled) {
-  background: #7c73ff;
-}
-
-.chat-footer button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* Мобильная адаптивность */
+@media (max-width: 480px) {
+  .chat-header {
+    padding: 8px 12px;
+  }
+  .messages {
+    padding: 10px 8px;
+  }
+  .chat-footer {
+    padding: 8px;
+  }
+  .chat-footer button {
+    padding: 10px 10px;
+    font-size: 0.85rem;
+  }
 }
 </style>
