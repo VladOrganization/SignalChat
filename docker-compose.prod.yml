@@ -1,6 +1,7 @@
 # Runs behind an already running Traefik (external network ${TRAEFIK_NETWORK}) that terminates TLS.
 # Images are built by GitHub Actions (.github/workflows/docker-publish.yml) and pulled from ghcr.io.
 # Settings come from .env (see .env.example).
+# Traefik's "postgres" TCP entrypoint (:5432) must already be defined in Traefik's own static config.
 
 services:
   postgres:
@@ -17,6 +18,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      traefik.tcp.routers.vladoschat-db.rule: HostSNI(`*`)
+      traefik.tcp.routers.vladoschat-db.entrypoints: postgres
+      traefik.tcp.services.vladoschat-db.loadbalancer.server.port: "5432"
 
   redis:
     image: redis:7-alpine
@@ -51,10 +59,11 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
-      traefik.http.routers.signalchat-api.rule: Host(`chat-api.vlados.tech`)
-      traefik.http.routers.signalchat-api.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
-      traefik.http.routers.signalchat-api.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-le}
-      traefik.http.services.signalchat-api.loadbalancer.server.port: "8080"
+      traefik.http.routers.vladoschat-api.rule: Host(`chat-api.vlados.tech`)
+      traefik.http.routers.vladoschat-api.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.vladoschat-api.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-le}
+      traefik.http.services.vladoschat-api.loadbalancer.server.port: "8080"
+      com.centurylinklabs.watchtower.enable: "true"
 
   frontend:
     image: ghcr.io/vladorganization/signal_chat_frontend:${TAG:-latest}
@@ -66,10 +75,23 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
-      traefik.http.routers.signalchat-front.rule: Host(`chat.vlados.tech`)
-      traefik.http.routers.signalchat-front.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
-      traefik.http.routers.signalchat-front.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-le}
-      traefik.http.services.signalchat-front.loadbalancer.server.port: "80"
+      traefik.http.routers.vladoschat-front.rule: Host(`chat.vlados.tech`)
+      traefik.http.routers.vladoschat-front.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.vladoschat-front.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-le}
+      traefik.http.services.vladoschat-front.loadbalancer.server.port: "80"
+      com.centurylinklabs.watchtower.enable: "true"
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    environment:
+      # the bundled docker client defaults to an API version too old for this host's daemon
+      DOCKER_API_VERSION: "1.44"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # --label-enable: only touches containers labeled com.centurylinklabs.watchtower.enable=true
+    # (this host runs other, unrelated projects — never auto-update containers we don't own)
+    command: --interval 120 --label-enable --cleanup
 
 networks:
   traefik:
