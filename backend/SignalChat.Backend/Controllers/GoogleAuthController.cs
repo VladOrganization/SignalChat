@@ -19,10 +19,12 @@ namespace SignalChat.Backend.Controllers
     public class GoogleAuthController : ControllerBase
     {
         private readonly IOptions<OpenIddictServerOptions> _oidcOptions;
+        private readonly IConfiguration _configuration;
 
-        public GoogleAuthController(IOptions<OpenIddictServerOptions> oidcOptions)
+        public GoogleAuthController(IOptions<OpenIddictServerOptions> oidcOptions, IConfiguration configuration)
         {
             _oidcOptions = oidcOptions;
+            _configuration = configuration;
         }
 
         [HttpGet("login")]
@@ -156,9 +158,9 @@ namespace SignalChat.Backend.Controllers
             var securityToken = tokenHandler.CreateToken(tokenDescriptor);
 
             var accessToken = tokenHandler.WriteToken(securityToken);
-
+            string front_url = _configuration["Front-Url:Url"];
             // Возвращаем JSON
-            return Redirect($"http://localhost:5173/auth/callback?token={Uri.EscapeDataString(accessToken)}");
+            return Redirect($"{front_url}/auth/callback?token={Uri.EscapeDataString(accessToken)}");
         }
     }
 }

@@ -34,8 +34,11 @@
           </form>
           <div class="toggle-link">
             <span>Уже есть аккаунт?</span>
-            <button type="button" @click="toggleMode">Войти</button>
+            <button type="button" @click="toggleMode">Войти</button>  
           </div>
+          <button type="button" class="google-btn" @click="loginWithGoogle">
+            <i class="fab fa-google"></i> Регистрация через Google
+          </button>
         </div>
 
         <!-- Сторона входа (back) -->

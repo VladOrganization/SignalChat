@@ -1,6 +1,7 @@
 import * as signalR from '@microsoft/signalr'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore, type Message } from '@/stores/chat'
+import { api } from './api'
 
 let connection: signalR.HubConnection | null = null
 
@@ -17,7 +18,7 @@ export async function startSignalR() {
   const baseURL = (import.meta.env.VITE_API_BASE_URL as string) || 'https://localhost:7093'
 
   connection = new signalR.HubConnectionBuilder()
-    .withUrl(`${baseURL}/chathub`, {
+    .withUrl(`${baseURL}/hubs/chat`, {
       accessTokenFactory: () => auth.accessToken || '',
     })
     .withAutomaticReconnect()
@@ -27,8 +28,17 @@ export async function startSignalR() {
     chat.addMessage(message as Message)
   })
 
-  connection.on('ReceiveReaction', (reactionData: unknown) => {
-    console.log('Reaction received:', reactionData)
+  connection.on('RecieveReaction', async () => {
+    try {
+      const result = await api.getMessages()
+      const messages = result.items.map((item) => ({
+        ...item,
+        reactions: (item as Message).reactions || { reactionEnum: 0, count: 0 },
+      })) as Message[]
+      chat.setMessages(messages, result.totalCount, result.page)
+    } catch (e) {
+      console.error(e)
+    }
   })
 
   try {
