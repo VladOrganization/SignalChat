@@ -17,10 +17,13 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
     "@microsoft/signalr": "^10.0.0",
+    "@primeuix/themes": "^3.1.1",
     "axios": "^1.18.1",
     "oidc-client-ts": "^3.5.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
+    "primeicons": "^8.0.2",
+    "primevue": "^4.5.5",
     "qs": "^6.15.3",
     "vue": "^3.5.29",
     "vue-router": "^5.1.0"

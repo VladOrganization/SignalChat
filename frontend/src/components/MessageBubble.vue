@@ -31,7 +31,7 @@
         <!-- Сетка изображений -->
         <div v-if="imageCount > 0" class="image-grid" :class="gridClass">
           <div v-for="(img, i) in message.images" :key="i" class="grid-item" :class="itemClass()">
-            <img :src="`${baseURL}/${img}`" loading="lazy" alt="" />
+            <Image :src="`${baseURL}/${img}`" alt="" preview />
           </div>
         </div>
 
@@ -67,6 +67,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ReactionMessage from '@/components/ReactionMessage.vue'
+import Image from 'primevue/image'
 import { getTelegramColor, getInitials } from '@/utils/colors' // Убедитесь, что путь к colors/color корректный
 
 const baseURL = (import.meta.env.VITE_API_BASE_URL as string) || 'https://localhost:7093'
@@ -154,11 +155,22 @@ function itemClass(): ItemClassName {
   --gap: 3px;
   max-width: 85%;
   border-radius: var(--radius);
+  overflow: hidden;
 }
 
 @media (min-width: 640px) {
   .message-bubble {
     max-width: 420px;
+  }
+}
+
+.message-bubble.has-images {
+  max-width: min(85%, 280px);
+}
+
+@media (min-width: 640px) {
+  .message-bubble.has-images {
+    max-width: 320px;
   }
 }
 
@@ -193,6 +205,7 @@ function itemClass(): ItemClassName {
 .image-grid {
   display: grid;
   gap: var(--gap);
+  width: 100%;
 }
 .image-grid.grid-1 {
   grid-template-columns: 1fr;
@@ -200,16 +213,45 @@ function itemClass(): ItemClassName {
 .image-grid.grid-2 {
   grid-template-columns: 1fr 1fr;
 }
+.image-grid.grid-3,
+.image-grid.grid-5,
+.image-grid.grid-6,
+.image-grid.grid-7,
+.image-grid.grid-8,
+.image-grid.grid-9 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.image-grid.grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
 .grid-item {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-inner);
 }
-.grid-item img {
+.grid-item :deep(.p-image) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.grid-item :deep(.p-image img) {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  cursor: pointer;
+}
+.grid-item.square {
+  aspect-ratio: 1 / 1;
+}
+.grid-item.natural {
+  max-height: 320px;
+}
+.grid-item.natural :deep(.p-image img) {
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  object-fit: contain;
 }
 .message-meta {
   display: flex;

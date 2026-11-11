@@ -3,8 +3,11 @@ import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import App from './App.vue'
 import '@fortawesome/fontawesome-free/css/all.min.css'
+import 'primeicons/primeicons.css'
 import { createRouter, createWebHistory } from 'vue-router'
 import AuthView from './components/AuthView.vue'
+import PrimeVue from 'primevue/config'
+import Aura from '@primeuix/themes/aura'
 
 const routes = [
   {
@@ -35,4 +38,12 @@ const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
 app.use(router)
 app.use(pinia)
+app.use(PrimeVue, {
+  theme: {
+    preset: Aura,
+    options: {
+      darkModeSelector: false,
+    },
+  },
+})
 app.mount('#app')
