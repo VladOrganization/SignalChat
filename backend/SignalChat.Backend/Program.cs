@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
 using Scalar.AspNetCore;
+using SignalChat.Backend.Controllers;
 using SignalChat.Backend.Database;
 using SignalChat.Backend.Database.Entities;
 using SignalChat.Backend.Hubs;
@@ -97,7 +98,8 @@ builder.Services.AddOpenIddict()
         
         // Включаем необходимые OAuth 2.0 потоки
         options.AllowPasswordFlow() // логин/пароль
-            .AllowRefreshTokenFlow();       // обновление токенов
+            .AllowRefreshTokenFlow()        // обновление токенов
+            .AllowCustomFlow(AuthController.GoogleExchangeGrantType); // обмен кода Google-входа на токены
         
         options.AcceptAnonymousClients();
         

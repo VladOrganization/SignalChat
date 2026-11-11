@@ -94,13 +94,36 @@ function loginWithGoogle() {
 }
 
 function handleGoogleCallback() {
-  const token = new URLSearchParams(window.location.search).get('token')
-  if (!token) return
+  const code = new URLSearchParams(window.location.search).get('code')
+  if (!code) return
 
-  authStore.setAuth({ accessToken: token, refreshToken: '' })
+  exchangeGoogleCode(code)
+}
 
-  // router.replace уберёт ?token= из истории и перейдёт на защищённый роут
-  router.replace('/global-chat')
+async function exchangeGoogleCode(code: string) {
+  try {
+    const params = new URLSearchParams()
+    params.append('grant_type', 'google_exchange')
+    params.append('code', code)
+
+    const response = await axios.post<{
+      access_token: string
+      refresh_token: string
+    }>(`${API_BASE_URL}/connect/token`, params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+
+    const accessToken = response.data.access_token
+    const refreshToken = response.data.refresh_token
+
+    authStore.setAuth({ accessToken, refreshToken })
+    axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
+
+    // router.replace уберёт ?code= из истории и перейдёт на защищённый роут
+    router.replace('/global-chat')
+  } catch {
+    error.value = 'Не удалось войти через Google'
+  }
 }
 
 onMounted(() => {

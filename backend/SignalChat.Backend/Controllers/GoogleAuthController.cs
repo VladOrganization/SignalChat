@@ -3,14 +3,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using OpenIddict.Abstractions;
-using OpenIddict.Server;
-using OpenIddict.Server.AspNetCore;
+using Microsoft.Extensions.Caching.Memory;
 using SignalChat.Backend.Database.Entities;
 using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Options;
 
 namespace SignalChat.Backend.Controllers
 {
@@ -18,13 +13,13 @@ namespace SignalChat.Backend.Controllers
     [Route("api/auth/google")]
     public class GoogleAuthController : ControllerBase
     {
-        private readonly IOptions<OpenIddictServerOptions> _oidcOptions;
         private readonly IConfiguration _configuration;
+        private readonly IMemoryCache _cache;
 
-        public GoogleAuthController(IOptions<OpenIddictServerOptions> oidcOptions, IConfiguration configuration)
+        public GoogleAuthController(IConfiguration configuration, IMemoryCache cache)
         {
-            _oidcOptions = oidcOptions;
             _configuration = configuration;
+            _cache = cache;
         }
 
         [HttpGet("login")]
@@ -97,70 +92,14 @@ namespace SignalChat.Backend.Controllers
                 }
             }
 
-            var options = _oidcOptions.Value;
+            // Выдаём одноразовый код обмена вместо токена напрямую: сам access/refresh
+            // токен должен выпускаться через OpenIddict (/connect/token), иначе
+            // у Google-пользователей никогда не будет refresh-токена.
+            var code = Guid.NewGuid().ToString();
+            _cache.Set(code, user.Id, TimeSpan.FromMinutes(1));
 
-            var signingCredentials = options.SigningCredentials.FirstOrDefault();
-
-            if (signingCredentials == null)
-            {
-                return StatusCode(500, new
-                {
-                    error = "Signing credentials not configured in OpenIddict."
-                });
-            }
-
-            // Создаём claims
-            var identity = new ClaimsIdentity(
-                TokenValidationParameters.DefaultAuthenticationType);
-
-            identity.SetClaim(
-                OpenIddictConstants.Claims.Subject,
-                user.Id.ToString());
-
-            identity.SetClaim(
-                OpenIddictConstants.Claims.Email,
-                user.Email!);
-
-            identity.SetScopes(
-                OpenIddictConstants.Scopes.OfflineAccess);
-
-            var claims = identity.Claims.ToList();
-
-            if (!claims.Any(x => x.Type == OpenIddictConstants.Claims.Scope))
-            {
-                claims.Add(
-                    new Claim(
-                        OpenIddictConstants.Claims.Scope,
-                        OpenIddictConstants.Scopes.OfflineAccess));
-            }
-
-            // JWT
-            var tokenHandler = new JwtSecurityTokenHandler();
-
-            var expires = DateTime.UtcNow.Add(
-                options.AccessTokenLifetime ??
-                TimeSpan.FromMinutes(15));
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-
-                Expires = expires,
-
-                Issuer = options.Issuer?.ToString()
-                         ?? "https://localhost:7093/",
-
-                SigningCredentials = signingCredentials,
-
-                TokenType = "at+jwt"
-            };
-
-            var securityToken = tokenHandler.CreateToken(tokenDescriptor);
-
-            var accessToken = tokenHandler.WriteToken(securityToken);
             string front_url = _configuration["Front-Url:Url"];
-            // Возвращаем JSON
-            return Redirect($"{front_url}/auth/callback?token={Uri.EscapeDataString(accessToken)}");
+            return Redirect($"{front_url}/auth/callback?code={Uri.EscapeDataString(code)}");
         }
     }
 }

@@ -18,10 +18,12 @@ namespace SignalChat.Backend.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
+        public const string GoogleExchangeGrantType = "google_exchange";
+
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
         private readonly IMemoryCache _cache;
-        
+
         public class PendingRegistration
         {
             public string Email { get; set; }
@@ -97,8 +99,8 @@ namespace SignalChat.Backend.Controllers
             };
             _cache.Set(confirmationCode, pending, TimeSpan.FromHours(24));
 
-           
-            var baseUrl = "https://localhost:7093"; 
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
             var callbackUrl = $"{baseUrl}/confirm-email?code={WebUtility.UrlEncode(confirmationCode)}";
 
            
@@ -126,15 +128,15 @@ namespace SignalChat.Backend.Controllers
             if (request.IsPasswordGrantType())
             {
                 var user = await _userManager.FindByEmailAsync(request.Username!);
-                
+
                 if (user == null)
                 {
                     return Forbid();
                 }
-                
+
                 if (!await _userManager.IsEmailConfirmedAsync(user))
                     return BadRequest("Please confirm your email address before logging in.");
-                
+
                 var result = await _signInManager.CheckPasswordSignInAsync(
                     user,
                     request.Password!,
@@ -145,30 +147,82 @@ namespace SignalChat.Backend.Controllers
                     return Forbid();
                 }
 
-                var identity = new ClaimsIdentity(
-                    TokenValidationParameters.DefaultAuthenticationType);
+                return SignIn(
+                    CreatePrincipal(user),
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
 
-                identity.SetClaim(OpenIddictConstants.Claims.Subject, user.Id);
-                identity.SetClaim(OpenIddictConstants.Claims.Email, user.Email!);
+            if (request.IsRefreshTokenGrantType())
+            {
+                var authenticateResult = await HttpContext.AuthenticateAsync(
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
-                identity.SetScopes(new[]
+                var subject = authenticateResult.Succeeded
+                    ? authenticateResult.Principal.GetClaim(OpenIddictConstants.Claims.Subject)
+                    : null;
+
+                var user = subject == null ? null : await _userManager.FindByIdAsync(subject);
+
+                if (user == null)
                 {
-                    OpenIddictConstants.Scopes.OfflineAccess
-                });
+                    return Forbid();
+                }
 
-                var principal = new ClaimsPrincipal(identity);
+                // Переиспользуем принципал из refresh-токена: OpenIddict сам выпустит
+                // новую пару access/refresh токенов (с ротацией refresh-токена).
+                return SignIn(
+                    authenticateResult.Principal!,
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
 
-                principal.SetScopes(new[]
+            if (request.GrantType == GoogleExchangeGrantType)
+            {
+                var code = request.GetParameter("code")?.ToString();
+
+                if (string.IsNullOrEmpty(code) ||
+                    !_cache.TryGetValue(code, out string? userId) ||
+                    userId == null)
                 {
-                    OpenIddictConstants.Scopes.OfflineAccess
-                });
+                    return Forbid();
+                }
+
+                _cache.Remove(code);
+
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return Forbid();
+                }
 
                 return SignIn(
-                    principal,
+                    CreatePrincipal(user),
                     OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             throw new NotImplementedException();
+        }
+
+        private static ClaimsPrincipal CreatePrincipal(User user)
+        {
+            var identity = new ClaimsIdentity(
+                TokenValidationParameters.DefaultAuthenticationType);
+
+            identity.SetClaim(OpenIddictConstants.Claims.Subject, user.Id);
+            identity.SetClaim(OpenIddictConstants.Claims.Email, user.Email!);
+
+            identity.SetScopes(new[]
+            {
+                OpenIddictConstants.Scopes.OfflineAccess
+            });
+
+            var principal = new ClaimsPrincipal(identity);
+
+            principal.SetScopes(new[]
+            {
+                OpenIddictConstants.Scopes.OfflineAccess
+            });
+
+            return principal;
         }
 
 

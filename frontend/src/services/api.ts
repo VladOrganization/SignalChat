@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7093'
+
 const http = axios.create()
 
 http.interceptors.request.use((config) => {
@@ -23,8 +25,13 @@ http.interceptors.response.use(
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true
 
+      if (!auth.refreshToken) {
+        auth.logout()
+        return Promise.reject(err)
+      }
+
       try {
-        const data = await api.refresh(auth.refreshToken!)
+        const data = await api.refresh(auth.refreshToken)
         auth.setAuth(data)
         original.headers['Authorization'] = `Bearer ${data.accessToken}`
         return http(original)
@@ -34,7 +41,6 @@ http.interceptors.response.use(
       }
     }
 
-    auth.logout()
     return Promise.reject(err)
   },
 )
@@ -74,8 +80,18 @@ export const api = {
   },
 
   async refresh(refreshToken: string) {
-    const res = await http.post<AuthResponse>('/api/auth/refresh', { refreshToken })
-    return res.data
+    const params = new URLSearchParams()
+    params.append('grant_type', 'refresh_token')
+    params.append('refresh_token', refreshToken)
+
+    const res = await axios.post<{
+      access_token: string
+      refresh_token: string
+    }>(`${API_BASE_URL}/connect/token`, params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+
+    return { accessToken: res.data.access_token, refreshToken: res.data.refresh_token }
   },
 
   async getMessages(page = 1, pageSize = 50) {
