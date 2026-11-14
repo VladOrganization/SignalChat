@@ -95,7 +95,14 @@ builder.Services.AddOpenIddict()
     .AddServer(options =>
     {
         options.SetTokenEndpointUris("connect/token");
-        
+
+        // Pinned explicitly to avoid issuer mismatches (ID2088) behind the reverse proxy.
+        var issuer = builder.Configuration["OpenIddict:Issuer"];
+        if (!string.IsNullOrEmpty(issuer))
+        {
+            options.SetIssuer(new Uri(issuer));
+        }
+
         // Включаем необходимые OAuth 2.0 потоки
         options.AllowPasswordFlow() // логин/пароль
             .AllowRefreshTokenFlow()        // обновление токенов

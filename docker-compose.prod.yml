@@ -45,6 +45,7 @@ services:
       Jwt__SecretKey: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY in .env}
       Jwt__Issuer: SignalChat
       Jwt__Audience: SignalChat
+      OpenIddict__Issuer: https://chat-api.vlados.tech
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID in .env}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:?set GOOGLE_CLIENT_SECRET in .env}
       Front-Url__Url: https://chat.vlados.tech
