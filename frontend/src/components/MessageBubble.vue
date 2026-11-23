@@ -155,7 +155,7 @@ function itemClass(): ItemClassName {
   --gap: 3px;
   max-width: 85%;
   border-radius: var(--radius);
-  overflow: hidden;
+  
 }
 
 @media (min-width: 640px) {

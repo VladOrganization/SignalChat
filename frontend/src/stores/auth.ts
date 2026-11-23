@@ -22,13 +22,20 @@ export const useAuthStore = defineStore(
       }
     }
 
+    function setUserName(name: string) {
+      const trimmed = name.trim()
+      if (trimmed) {
+        userName.value = trimmed
+      }
+    }
+
     function logout() {
       accessToken.value = null
       refreshToken.value = null
       userName.value = 'Пользователь'
     }
 
-    return { accessToken, refreshToken, userName, isAuthenticated, setAuth, logout }
+    return { accessToken, refreshToken, userName, isAuthenticated, setAuth, setUserName, logout }
   },
   {
     persist: true,

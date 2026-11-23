@@ -53,6 +53,12 @@ export interface AuthResponse {
   refreshToken: string
 }
 
+export interface CurrentUser {
+  id: string
+  userName: string
+  email: string
+}
+
 export interface MessageDto {
   id: string
   text: string
@@ -92,6 +98,11 @@ export const api = {
     })
 
     return { accessToken: res.data.access_token, refreshToken: res.data.refresh_token }
+  },
+
+  async getMe() {
+    const res = await http.get<CurrentUser>('/api/auth/me', { headers: { 'X-Auth': '1' } })
+    return res.data
   },
 
   async getMessages(page = 1, pageSize = 50) {
