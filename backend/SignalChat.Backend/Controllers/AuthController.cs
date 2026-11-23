@@ -2,6 +2,7 @@
 using System.Net;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -200,6 +201,26 @@ namespace SignalChat.Backend.Controllers
             }
 
             throw new NotImplementedException();
+        }
+
+        [Authorize]
+        [HttpGet("/api/auth/me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var subject = User.FindFirstValue(OpenIddictConstants.Claims.Subject);
+            if (string.IsNullOrEmpty(subject))
+                return Unauthorized();
+
+            var user = await _userManager.FindByIdAsync(subject);
+            if (user is null)
+                return Unauthorized();
+
+            return Ok(new
+            {
+                id = user.Id,
+                userName = user.UserName,
+                email = user.Email
+            });
         }
 
         private static ClaimsPrincipal CreatePrincipal(User user)

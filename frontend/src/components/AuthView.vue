@@ -88,6 +88,17 @@ const emit = defineEmits<{ (e: 'authenticated'): void }>()
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7093'
 
+async function fetchUserName(accessToken: string): Promise<string | undefined> {
+  try {
+    const response = await axios.get<{ userName?: string }>(`${API_BASE_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    return response.data?.userName || undefined
+  } catch {
+    return undefined
+  }
+}
+
 // ========== Google OAuth ==========
 function loginWithGoogle() {
   window.location.href = `${API_BASE_URL}/api/auth/google/login`
@@ -116,7 +127,7 @@ async function exchangeGoogleCode(code: string) {
     const accessToken = response.data.access_token
     const refreshToken = response.data.refresh_token
 
-    authStore.setAuth({ accessToken, refreshToken })
+    authStore.setAuth({ accessToken, refreshToken, userName: await fetchUserName(accessToken) })
     axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
 
     // router.replace уберёт ?code= из истории и перейдёт на защищённый роут
@@ -220,7 +231,7 @@ async function login() {
     const accessToken = response.data.access_token
     const refreshToken: string = response.data.refresh_token
 
-    authStore.setAuth({ accessToken, refreshToken })
+    authStore.setAuth({ accessToken, refreshToken, userName: await fetchUserName(accessToken) })
     axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
     emit('authenticated')
 

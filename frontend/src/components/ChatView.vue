@@ -171,7 +171,17 @@ function logout() {
   emit('logout')
 }
 
+async function loadCurrentUser() {
+  try {
+    const me = await api.getMe()
+    auth.setUserName(me.userName)
+  } catch {
+    // Если запрос не удался, оставляем имя, сохранённое в сторе.
+  }
+}
+
 onMounted(async () => {
+  void loadCurrentUser()
   try {
     const result = await api.getMessages()
     chat.setMessages(result.items, result.totalCount, result.page)
