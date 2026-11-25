@@ -362,6 +362,52 @@ namespace SignalChat.Backend.Migrations
                     b.ToTable("OpenIddictTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SignalChat.Backend.Database.Entities.Dialog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DirectKey")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DirectKey")
+                        .IsUnique()
+                        .HasFilter("\"DirectKey\" IS NOT NULL");
+
+                    b.ToTable("Dialogs");
+                });
+
+            modelBuilder.Entity("SignalChat.Backend.Database.Entities.DialogParticipant", b =>
+                {
+                    b.Property<Guid>("DialogId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("DialogId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DialogParticipants");
+                });
+
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Image", b =>
                 {
                     b.Property<Guid>("Id")
@@ -388,6 +434,9 @@ namespace SignalChat.Backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("DialogId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasMaxLength(4096)
@@ -405,6 +454,8 @@ namespace SignalChat.Backend.Migrations
                     b.HasIndex("Time");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("DialogId", "Time");
 
                     b.ToTable("Messages");
                 });
@@ -587,6 +638,25 @@ namespace SignalChat.Backend.Migrations
                     b.Navigation("Authorization");
                 });
 
+            modelBuilder.Entity("SignalChat.Backend.Database.Entities.DialogParticipant", b =>
+                {
+                    b.HasOne("SignalChat.Backend.Database.Entities.Dialog", "Dialog")
+                        .WithMany("Participants")
+                        .HasForeignKey("DialogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SignalChat.Backend.Database.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Dialog");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Image", b =>
                 {
                     b.HasOne("SignalChat.Backend.Database.Entities.Message", "Message")
@@ -600,6 +670,12 @@ namespace SignalChat.Backend.Migrations
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Message", b =>
                 {
+                    b.HasOne("SignalChat.Backend.Database.Entities.Dialog", null)
+                        .WithMany("Messages")
+                        .HasForeignKey("DialogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("SignalChat.Backend.Database.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -638,6 +714,13 @@ namespace SignalChat.Backend.Migrations
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization", b =>
                 {
                     b.Navigation("Tokens");
+                });
+
+            modelBuilder.Entity("SignalChat.Backend.Database.Entities.Dialog", b =>
+                {
+                    b.Navigation("Messages");
+
+                    b.Navigation("Participants");
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Message", b =>

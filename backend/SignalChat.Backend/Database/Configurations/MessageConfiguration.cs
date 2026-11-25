@@ -21,7 +21,13 @@ public class MessageConfiguration : IEntityTypeConfiguration<Message>
             .WithMany()
             .HasForeignKey(m => m.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        builder.HasOne<Dialog>()
+            .WithMany(m => m.Messages)
+            .HasForeignKey(m => m.DialogId)
+            .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasIndex(m => new { m.DialogId, m.Time });
         builder.HasIndex(m => m.UserId);
         builder.HasIndex(m => m.Time);
     }

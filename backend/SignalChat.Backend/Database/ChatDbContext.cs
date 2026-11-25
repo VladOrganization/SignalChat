@@ -9,6 +9,8 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> dbContextOptions) : I
     public DbSet<User> Users { get; set; }
     public DbSet<Message> Messages { get; set; }
     public DbSet<Reaction> Reactions { get; set; }
+    public DbSet<DialogParticipant> DialogParticipants { get; set; }
+    public DbSet<Dialog> Dialogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
