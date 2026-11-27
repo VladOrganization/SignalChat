@@ -29,7 +29,7 @@ public class ChatController(ISender sender) : ControllerBase
         if (userIdStr is null)
             throw new UnauthorizedException("Пользователь не авторизован");
         
-        return sender.Send(new SendMessageCommand(userIdStr, request.Text,request.ImageUrl), ct);
+        return sender.Send(new SendMessageCommand(userIdStr, request.Text, request.ImageUrl, request.DialogId), ct);
     }
 
     [Authorize]

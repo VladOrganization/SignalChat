@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
 using Scalar.AspNetCore;
@@ -136,7 +137,7 @@ builder.Services.AddOpenIddict()
 
 //builder.Services.AddHttpClient();
 //builder.Services.AddHttpContextAccessor();
-
+builder.Services.AddSingleton<IUserIdProvider, UserIdProvider>();
 builder.Services.Configure<IdentityOptions>(options =>
 {
     // Отключаем все требования к паролю
