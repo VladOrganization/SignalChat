@@ -1,6 +1,7 @@
 import * as signalR from '@microsoft/signalr'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore, type Message } from '@/stores/chat'
+import { useDialogsStore } from '@/stores/dialogs'
 import { api } from './api'
 
 let connection: signalR.HubConnection | null = null
@@ -8,6 +9,7 @@ let connection: signalR.HubConnection | null = null
 export async function startSignalR() {
   const auth = useAuthStore()
   const chat = useChatStore()
+  const dialogs = useDialogsStore()
 
   if (!auth.accessToken) return
 
@@ -25,12 +27,25 @@ export async function startSignalR() {
     .build()
 
   connection.on('ReceiveMessage', (message: unknown) => {
-    chat.addMessage(message as Message)
+    const msg = message as Message
+    if (!chat.activeDialog || msg.dialogId !== chat.activeDialog) {
+      dialogs.applyIncomingMessage(msg)
+      return
+    }
+
+    chat.addMessage(msg)
+    dialogs.applyIncomingMessage(msg)
   })
 
-  connection.on('RecieveReaction', async () => {
+  connection.on('RecieveReaction', async (payload: unknown) => {
+    const dialogId = chat.activeDialog
+    if (!dialogId) return
+
+    const event = payload as { dialogId?: string } | null
+    if (event?.dialogId && event.dialogId !== dialogId) return
+
     try {
-      const result = await api.getMessages()
+      const result = await api.getMessages(dialogId)
       const messages = result.items.map((item) => ({
         ...item,
         reactions: (item as Message).reactions || { reactionEnum: 0, count: 0 },

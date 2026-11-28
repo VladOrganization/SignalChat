@@ -10,6 +10,8 @@ namespace SignalChat.Backend.Models
         string UserName, 
         DateTime Time,
         List<string> Images,
+        Guid DialogId,
+        string UserId,
         List<ReactionCount> Reactions
         );
 }

@@ -53,12 +53,42 @@ export interface AuthResponse {
   refreshToken: string
 }
 
+export interface CurrentUser {
+  id: string
+  userName: string
+  email: string
+}
+
+export interface DialogListItem {
+  dialogId: string
+  type: number
+  partnerId: string | null
+  partnerName: string | null
+  title: string | null
+  lastMessageText: string | null
+  lastMessageTime: string | null
+  unreadCount: number
+}
+
+export interface UserListItem {
+  id: string
+  userName: string
+}
+
+export const DialogType = {
+  GlobalChat: 0,
+  Direct: 1,
+  Group: 2,
+} as const
+
 export interface MessageDto {
   id: string
   text: string
   userName: string
   time: string
   images: string[]
+  dialogId: string
+  userId: string
 }
 
 export interface PagedResult<T> {
@@ -94,18 +124,54 @@ export const api = {
     return { accessToken: res.data.access_token, refreshToken: res.data.refresh_token }
   },
 
-  async getMessages(page = 1, pageSize = 50) {
-    const res = await http.get<PagedResult<MessageDto>>('/api/chat/messages', {
-      params: { page, pageSize },
+  async getMe() {
+    const res = await http.get<CurrentUser>('/api/auth/me', { headers: { 'X-Auth': '1' } })
+    return res.data
+  },
+
+  async getGlobalDialog() {
+    const res = await http.get<{ dialogId: string }>('/api/chat/global', {
       headers: { 'X-Auth': '1' },
     })
     return res.data
   },
 
-  async sendMessage(text: string, imageUrl: string[]) {
+  async getDialogs() {
+    const res = await http.get<DialogListItem[]>('/api/chat/dialogs', {
+      headers: { 'X-Auth': '1' },
+    })
+    return res.data
+  },
+
+  async searchUsers(search: string) {
+    const res = await http.get<UserListItem[]>('/api/chat/users', {
+      params: { search },
+      headers: { 'X-Auth': '1' },
+    })
+    return res.data
+  },
+
+  async createDirectDialog(userId: string) {
+    const res = await http.post<string>(
+      '/api/chat/direct',
+      { userId },
+      { headers: { 'X-Auth': '1' } },
+    )
+    return res.data
+  },
+
+  async getMessages(dialogId: string, page = 1, pageSize = 50) {
+    const res = await http.get<PagedResult<MessageDto>>('/api/chat/messages', {
+      params: { dialogId, page, pageSize },
+      headers: { 'X-Auth': '1' },
+    })
+    return res.data
+  },
+
+  async sendMessage(dialogId: string, text: string, imageUrl: string[]) {
     const res = await http.post<MessageDto>(
       '/api/chat/messages',
-      { text, imageUrl },
+      { dialogId, text, imageUrl },
       { headers: { 'X-Auth': '1' } },
     )
     return res.data

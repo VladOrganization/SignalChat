@@ -1,56 +1,71 @@
 <template>
-  <div class="chat-layout">
-    <header class="chat-header">
-      <div class="user-info">
-        <div 
-          class="user-avatar"
-          :style="{ backgroundColor: getTelegramColor(auth.userName) }"
-        >
-          {{ getInitials(auth.userName) }}
+  <div class="chat-app" :class="{ 'mobile-dialog-open': showMessagesOnMobile }">
+    <DialogsPanel
+      :active-id="chat.activeDialog"
+      @select="selectDialog"
+      @new-chat="showNewChat = true"
+    />
+
+    <div class="chat-layout">
+      <header class="chat-header">
+        <button class="back-btn" title="К списку чатов" @click="closeDialogOnMobile">←</button>
+        <div class="user-info">
+          <div
+            class="user-avatar"
+            :style="{ backgroundColor: getTelegramColor(headerTitle) }"
+          >
+            {{ getInitials(headerTitle) }}
+          </div>
+          <span class="username">{{ headerTitle }}</span>
         </div>
-        <span class="username">{{ auth.userName }}</span>
-      </div>
-      <button class="logout-btn" @click="logout">Выйти</button>
-    </header>
+        <button class="logout-btn" @click="logout">Выйти</button>
+      </header>
 
-    <main ref="messages" class="messages" @scroll="onScroll">
-      <div v-if="loading" class="status">Загрузка сообщений...</div>
-      <div v-else-if="chat.messages.length === 0" class="status">
-        Нет сообщений. Напишите первым!
-      </div>
-      <template v-else>
-        <div v-if="loadingMore" class="status load-more-status">Загрузка...</div>
-        <MessageBubble
-          v-for="msg in chat.messages"
-          :key="msg.id"
-          :message="{
-            id: msg.id,
-            text: msg.text,
-            time: formatTime(msg.time),
-            own: msg.userName === auth.userName,
-            senderName: msg.userName,
-            images: msg.images,
-            reactions: msg.reactions
-          }"
-        />
-      </template>
-    </main>
+      <main ref="messages" class="messages" @scroll="onScroll">
+        <div v-if="loading" class="status">Загрузка сообщений...</div>
+        <div v-else-if="chat.messages.length === 0" class="status">
+          Нет сообщений. Напишите первым!
+        </div>
+        <template v-else>
+          <div v-if="loadingMore" class="status load-more-status">Загрузка...</div>
+          <MessageBubble
+            v-for="msg in chat.messages"
+            :key="msg.id"
+            :message="{
+              id: msg.id,
+              text: msg.text,
+              time: formatTime(msg.time),
+              own: msg.userId === auth.userId,
+              senderName: msg.userName,
+              images: msg.images,
+              reactions: msg.reactions
+            }"
+          />
+        </template>
+      </main>
 
-    <footer class="chat-footer">
-      <ImagePreviewGrid :images @remove="removeFile" />
-      <form @submit.prevent="send">
-        <input
-          v-model.trim="textModel"
-          type="text"
-          placeholder="Введите сообщение..."
-          @keydown.enter.exact.prevent="send"
-        />
-        <ImageUploadButton @select="addFiles" :disabled="images.length >= 9" />
-        <button type="submit" :disabled="sending || (!textModel && images.length == 0)">
-          Отправить
-        </button>
-      </form>
-    </footer>
+      <footer class="chat-footer">
+        <ImagePreviewGrid :images @remove="removeFile" />
+        <form @submit.prevent="send">
+          <input
+            v-model.trim="textModel"
+            type="text"
+            placeholder="Введите сообщение..."
+            @keydown.enter.exact.prevent="send"
+          />
+          <ImageUploadButton @select="addFiles" :disabled="images.length >= 9" />
+          <button type="submit" :disabled="sending || (!textModel && images.length == 0)">
+            Отправить
+          </button>
+        </form>
+      </footer>
+    </div>
+
+    <NewChatModal
+      v-if="showNewChat"
+      @close="showNewChat = false"
+      @selected="onDialogCreated"
+    />
   </div>
 </template>
 
@@ -59,10 +74,15 @@ import { ref, onMounted, onUnmounted, nextTick, watch, useTemplateRef } from 'vu
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
+import { useDialogsStore } from '@/stores/dialogs'
 import { startSignalR, stopSignalR } from '@/services/signalr'
 import ImageUploadButton from '@/components/ImageUploadButton.vue'
 import ImagePreviewGrid from '@/components/ImagePreviewGrid.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
+import DialogsPanel from '@/components/DialogsPanel.vue'
+import NewChatModal from '@/components/NewChatModal.vue'
+import { computed } from 'vue'
+import { DialogType } from '@/services/api'
 import { getTelegramColor, getInitials } from '@/utils/colors' // Убедитесь, что путь к colors/color правильный
 
 export interface ImageFile {
@@ -91,11 +111,70 @@ function removeFile(index: number) {
 const emit = defineEmits<{ (e: 'logout'): void }>()
 const auth = useAuthStore()
 const chat = useChatStore()
+const dialogs = useDialogsStore()
 const textModel = ref('')
 const sending = ref(false)
 const loading = ref(true)
 const loadingMore = ref(false)
+const showNewChat = ref(false)
+const mobileView = ref(window.matchMedia('(max-width: 720px)').matches)
+const mobileDialogOpen = ref(false)
 const messagesRef = useTemplateRef('messages')
+
+const activeDialogItem = computed(
+  () => dialogs.items.find((d) => d.dialogId === chat.activeDialog) ?? null
+)
+
+const headerTitle = computed(() => {
+  const item = activeDialogItem.value
+  if (!item) return auth.userName
+  if (item.type === DialogType.GlobalChat) return item.title ?? 'Общий чат'
+  return item.partnerName ?? 'Без названия'
+})
+
+const showMessagesOnMobile = computed(() => !mobileView.value || mobileDialogOpen.value)
+
+function onResize() {
+  mobileView.value = window.matchMedia('(max-width: 720px)').matches
+  if (!mobileView.value) mobileDialogOpen.value = false
+}
+
+async function openDialog(dialogId: string) {
+  if (chat.activeDialog === dialogId) {
+    dialogs.clearUnread(dialogId)
+    return
+  }
+
+  chat.setActiveDialog(dialogId)
+  dialogs.clearUnread(dialogId)
+  if (mobileView.value) mobileDialogOpen.value = true
+
+  loading.value = true
+  try {
+    const result = await api.getMessages(dialogId)
+    chat.setMessages(result.items, result.totalCount, result.page)
+    await scrollToBottom()
+  } catch (e) {
+    console.error('Не удалось загрузить сообщения', e)
+    chat.setMessages([], 0, 1)
+  } finally {
+    loading.value = false
+  }
+}
+
+function selectDialog(dialogId: string) {
+  void openDialog(dialogId)
+}
+
+function closeDialogOnMobile() {
+  mobileDialogOpen.value = false
+}
+
+async function onDialogCreated(dialogId: string) {
+  showNewChat.value = false
+  await dialogs.load()
+  await openDialog(dialogId)
+}
 
 function formatTime(iso: string) {
   if (!iso) return ''
@@ -118,14 +197,15 @@ watch(
 )
 
 async function loadMore() {
-  if (!chat.hasMore || loadingMore.value) return
+  const dialogId = chat.activeDialog
+  if (!dialogId || !chat.hasMore || loadingMore.value) return
   loadingMore.value = true
   const el = messagesRef.value!
   const prevScrollHeight = el.scrollHeight
   const prevScrollTop = el.scrollTop
 
   try {
-    const result = await api.getMessages(chat.currentPage + 1)
+    const result = await api.getMessages(dialogId, chat.currentPage + 1)
     chat.appendOlderMessages(result.items, result.totalCount, result.page)
     await nextTick()
     el.scrollTop = prevScrollTop + (el.scrollHeight - prevScrollHeight)
@@ -141,6 +221,9 @@ function onScroll() {
 }
 
 async function send() {
+  const dialogId = chat.activeDialog
+  if (!dialogId) return
+
   const val = textModel.value
   let imagesPath: string[] = []
   if (images.value.length > 0) {
@@ -152,7 +235,7 @@ async function send() {
 
   sending.value = true
   try {
-    await api.sendMessage(val, imagesPath)
+    await api.sendMessage(dialogId, val, imagesPath)
     textModel.value = ''
     images.value = []
   } finally {
@@ -167,13 +250,30 @@ async function loadImages() {
 function logout() {
   stopSignalR()
   chat.clear()
+  dialogs.clear()
   auth.logout()
   emit('logout')
 }
 
-onMounted(async () => {
+async function loadCurrentUser() {
   try {
-    const result = await api.getMessages()
+    const me = await api.getMe()
+    auth.setUser({ id: me.id, userName: me.userName })
+  } catch {
+    // Если запрос не удался, оставляем данные, сохранённые в сторе.
+  }
+}
+
+onMounted(async () => {
+  window.addEventListener('resize', onResize)
+
+  void loadCurrentUser()
+  void dialogs.load()
+
+  try {
+    const { dialogId } = await api.getGlobalDialog()
+    chat.setActiveDialog(dialogId)
+    const result = await api.getMessages(dialogId)
     chat.setMessages(result.items, result.totalCount, result.page)
     await scrollToBottom()
   } finally {
@@ -183,20 +283,44 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
   stopSignalR()
 })
 </script>
 
 <style scoped>
-.chat-layout {
+.chat-app {
   display: flex;
-  flex-direction: column;
   width: 100%;
   height: 100vh;
   height: 100dvh;
   background: #1a1a2e;
   color: #e0e0ff;
   overflow: hidden;
+}
+
+.chat-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.back-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: #8888aa;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 8px 0 0;
+  flex-shrink: 0;
+}
+
+.back-btn:hover {
+  color: #e0e0ff;
 }
 
 .chat-header {
@@ -315,6 +439,24 @@ onUnmounted(() => {
 }
 
 /* Мобильная адаптивность */
+@media (max-width: 720px) {
+  .back-btn {
+    display: block;
+  }
+
+  .chat-layout {
+    display: none;
+  }
+
+  .mobile-dialog-open .chat-layout {
+    display: flex;
+  }
+
+  .mobile-dialog-open :deep(.dialogs-panel) {
+    display: none;
+  }
+}
+
 @media (max-width: 480px) {
   .chat-header {
     padding: 8px 12px;

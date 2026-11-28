@@ -20,7 +20,17 @@ public class SendMessageHandler(ChatDbContext db, IHubContext<ChatHub> hubContex
         var dialog = await db.Dialogs.FirstOrDefaultAsync(x => x.Id == request.DialogId, cancellationToken)
             ?? throw new NotFoundException("Такого типа чатов не сушествует");
 
-        
+        if (dialog.Type != DialogEnum.GlobalChat)
+        {
+            var userDailog = await db.DialogParticipants.FirstOrDefaultAsync(x =>
+                    x.UserId == user.Id
+                    && x.DialogId == request.DialogId,
+                cancellationToken
+            );
+            if (userDailog == null)
+                throw new NotFoundException("такого диалога не сушествует");
+        }
+
         
         var id = Guid.NewGuid();
         var images = request.Images?.Select(x => new Image {ImageUrl = x, MessageId = id }).ToList();

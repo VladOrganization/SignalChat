@@ -11,6 +11,7 @@ using Scalar.AspNetCore;
 using SignalChat.Backend.Controllers;
 using SignalChat.Backend.Database;
 using SignalChat.Backend.Database.Entities;
+using SignalChat.Backend.Database.Entities.Enums;
 using SignalChat.Backend.Hubs;
 using SignalChat.Backend.Middleware;
 using SignalChat.Backend.Pipeline;
@@ -180,6 +181,20 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
     db.Database.Migrate();
+
+    // Общий чат должен существовать всегда: идемпотентно создаём его при старте.
+    var globalDialogExists = db.Dialogs.Any(d => d.Id == GlobalDialog.Id);
+    if (!globalDialogExists)
+    {
+        db.Dialogs.Add(new Dialog
+        {
+            Id = GlobalDialog.Id,
+            Type = DialogEnum.GlobalChat,
+            DirectKey = null,
+            CreatedAt = DateTime.UtcNow
+        });
+        db.SaveChanges();
+    }
 }
 
 if (app.Environment.IsDevelopment())

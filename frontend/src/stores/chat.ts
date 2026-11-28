@@ -7,13 +7,17 @@ export interface Message {
   userName: string
   time: string
   images?: string[]
-  reactions?: {
-    reactionEnum: number
-    count: number
-  } | Array<{
-    reactionEnum: number
-    count: number
-  }>
+  reactions?:
+    | {
+        reactionEnum: number
+        count: number
+      }
+    | Array<{
+        reactionEnum: number
+        count: number
+      }>
+  dialogId: string
+  userId: string
 }
 
 export const useChatStore = defineStore('chat', () => {
@@ -21,7 +25,13 @@ export const useChatStore = defineStore('chat', () => {
   const totalCount = ref(0)
   const currentPage = ref(1)
   const hasMore = computed(() => messages.value.length < totalCount.value)
+  const activeDialog = ref<string | null>(null)
 
+  function setActiveDialog(id: string) {
+    if (activeDialog.value === id) return
+    activeDialog.value = id
+    clear()
+  }
   function setMessages(msgs: Message[], total: number, page: number) {
     messages.value = msgs
     totalCount.value = total
@@ -49,5 +59,16 @@ export const useChatStore = defineStore('chat', () => {
     currentPage.value = 1
   }
 
-  return { messages, totalCount, currentPage, hasMore, setMessages, appendOlderMessages, addMessage, clear }
+  return {
+    messages,
+    totalCount,
+    currentPage,
+    activeDialog,
+    hasMore,
+    setActiveDialog,
+    setMessages,
+    appendOlderMessages,
+    addMessage,
+    clear,
+  }
 })

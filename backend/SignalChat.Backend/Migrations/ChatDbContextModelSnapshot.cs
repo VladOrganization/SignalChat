@@ -384,7 +384,7 @@ namespace SignalChat.Backend.Migrations
                         .IsUnique()
                         .HasFilter("\"DirectKey\" IS NOT NULL");
 
-                    b.ToTable("Dialogs");
+                    b.ToTable("Dialogs", (string)null);
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.DialogParticipant", b =>
@@ -405,7 +405,7 @@ namespace SignalChat.Backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("DialogParticipants");
+                    b.ToTable("DialogParticipants", (string)null);
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Image", b =>
@@ -425,7 +425,7 @@ namespace SignalChat.Backend.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("Image");
+                    b.ToTable("Image", (string)null);
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Message", b =>
@@ -457,7 +457,7 @@ namespace SignalChat.Backend.Migrations
 
                     b.HasIndex("DialogId", "Time");
 
-                    b.ToTable("Messages");
+                    b.ToTable("Messages", (string)null);
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.Reaction", b =>
@@ -482,7 +482,7 @@ namespace SignalChat.Backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Reactions");
+                    b.ToTable("Reactions", (string)null);
                 });
 
             modelBuilder.Entity("SignalChat.Backend.Database.Entities.User", b =>

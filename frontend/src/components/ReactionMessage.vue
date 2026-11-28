@@ -46,18 +46,22 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || 'https://l
 
 async function selectOption(option: ReactionOption) {
   isOpen.value = false
-  await axios.post(
-    `${API_BASE_URL}/api/chat/reactions`,
-    {
-      messageId: reactionProps.messageId,
-      reaction: option.id,
-    },
-    {
-      headers: {
-        'Authorization': `Bearer ${auth.accessToken}`,
+  try {
+    await axios.post(
+      `${API_BASE_URL}/api/chat/reactions`,
+      {
+        messageId: reactionProps.messageId,
+        reaction: option.id,
       },
-    }
-  )
+      {
+        headers: {
+          'Authorization': `Bearer ${auth.accessToken}`,
+        },
+      }
+    )
+  } catch (error) {
+    console.error('Не удалось поставить реакцию:', error)
+  }
 }
 
 const options: ReactionOption[] = [
@@ -111,7 +115,7 @@ const options: ReactionOption[] = [
   background-color: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
+  
   z-index: 1000;
   padding: 6px 0;
 }

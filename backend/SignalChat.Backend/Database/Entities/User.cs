@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using SignalChat.Backend.Database.Configurations;
 
 namespace SignalChat.Backend.Database.Entities;
 
